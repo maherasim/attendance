@@ -1,10 +1,10 @@
-# Local PHP config (passwords, DB credentials) — copy from attend-php/config.example.php
-attend-php/config.php
+# Local PHP config — copy from config.example.php
+config.php
 
 # Uploaded attendance photos
-attend-php/uploads/*
-!attend-php/uploads/.htaccess
-!attend-php/uploads/index.php
+uploads/*
+!uploads/.htaccess
+!uploads/index.php
 
 # OS / editor
 Thumbs.db
