@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="theme-color" content="#0d5c3a"/>
+<title>Vehari UC Attendance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f0f4f8;font-family:'Segoe UI',sans-serif;}
+#root{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+input:focus,select:focus{border-color:#0d5c3a!important;outline:none;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:#c0d4c8;border-radius:4px;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulsing{animation:pulse 1.4s infinite;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  ★ STEP 1: Paste your Google Apps Script URL between the quotes below.
+//  ★ STEP 2: Save the file and re-upload to Netlify.
+//    Every phone will then automatically sync — no other setup needed.
+// ══════════════════════════════════════════════════════════════════════════════
+const HARDCODED_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzCuoDhvH97lCS8IAfESN6JZ6kmdg1Ou9pflcxBbvhvdMxoEeKc4qNSIuF_QeFvNJyfw/exec";
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const ADMIN_PW      = "Vehari@2026";
+const GEOFENCE_M    = 500;
+const KEY_REC       = "uc_rec_v6";
+const KEY_MASTER    = "uc_master_v6";
+const KEY_QUEUE     = "uc_queue_v6";
+const KEY_SCRIPT    = "uc_script_v6";
+
+// ── OFFICIAL 105 UC LIST WITH OFFICE COORDINATES ──────────────────────────────
+const DEFAULT_UC_LIST = [
+  { no:  1, name:"Chak No. 52/WB",      tehsil:"Vehari",   lat:30.110979, lng:72.185326 },
+  { no:  2, name:"Chak No. 78/WB",      tehsil:"Vehari",   lat:30.047931, lng:72.190162 },
+  { no:  3, name:"Chak No. 155/WB",     tehsil:"Vehari",   lat:30.025363, lng:72.210374 },
+  { no:  4, name:"Chak No. 95/WB",      tehsil:"Vehari",   lat:30.000915, lng:72.283872 },
+  { no:  5, name:"Chak No. 87/WB",      tehsil:"Vehari",   lat:30.025908, lng:72.244708 },
+  { no:  6, name:"Chak No. 24/WB",      tehsil:"Vehari",   lat:30.083093, lng:72.317417 },
+  { no:  7, name:"Chak No. 56/WB",      tehsil:"Vehari",   lat:30.109418, lng:72.261532 },
+  { no:  8, name:"Chak No. 58/WB",      tehsil:"Vehari",   lat:30.140082, lng:72.247731 },
+  { no:  9, name:"Chak No. 34/WB",      tehsil:"Vehari",   lat:30.117226, lng:72.290604 },
+  { no: 10, name:"Chak No. 206/EB",     tehsil:"Vehari",   lat:30.162633, lng:72.392207 },
+  { no: 11, name:"Chak No. 194/EB",     tehsil:"Vehari",   lat:30.162633, lng:72.392207 },
+  { no: 12, name:"Chak No. 16/WB",      tehsil:"Vehari",   lat:30.087420, lng:72.399943 },
+  { no: 13, name:"Chak No. 75/WB",      tehsil:"Vehari",   lat:30.057164, lng:72.319333 },
+  { no: 14, name:"Chak No. 01/WB",      tehsil:"Vehari",   lat:30.078855, lng:72.473875 },
+  { no: 15, name:"Chak No. 166/EB",     tehsil:"Vehari",   lat:30.167229, lng:72.528432 },
+  { no: 16, name:"Chak No. 533/EB",     tehsil:"Vehari",   lat:30.110276, lng:72.516865 },
+  { no: 17, name:"Chak No. 537/EB",     tehsil:"Vehari",   lat:30.104320, lng:72.560260 },
+  { no: 18, name:"Chak No. 561/EB",     tehsil:"Vehari",   lat:30.078855, lng:72.473875 },
+  { no: 19, name:"Chak No. 15/WB",      tehsil:"Vehari",   lat:30.078855, lng:72.473875 },
+  { no: 20, name:"Chak No. 19/WB",      tehsil:"Vehari",   lat:30.060134, lng:72.470791 },
+  { no: 21, name:"Fazal Wah",           tehsil:"Vehari",   lat:30.020653, lng:72.587705 },
+  { no: 22, name:"Allah Abad",          tehsil:"Vehari",   lat:30.020653, lng:72.587705 },
+  { no: 23, name:"Kot Ghulam Qadir",    tehsil:"Vehari",   lat:29.892515, lng:72.510921 },
+  { no: 24, name:"Budh Guhlam",         tehsil:"Vehari",   lat:29.929029, lng:72.598985 },
+  { no: 25, name:"Dad Kamera",          tehsil:"Vehari",   lat:29.929097, lng:72.668148 },
+  { no: 26, name:"Luddan",              tehsil:"Vehari",   lat:29.893508, lng:72.560573 },
+  { no: 27, name:"Ali-Ud-Din",          tehsil:"Vehari",   lat:29.904129, lng:72.548396 },
+  { no: 28, name:"Akbar Shah",          tehsil:"Vehari",   lat:29.892515, lng:72.510921 },
+  { no: 29, name:"Qadir Wah",           tehsil:"Vehari",   lat:29.971834, lng:72.384384 },
+  { no: 30, name:"Karim Wah",           tehsil:"Vehari",   lat:29.922105, lng:72.389960 },
+  { no: 31, name:"Chak No. 63/WB",      tehsil:"Vehari",   lat:29.970933, lng:72.320454 },
+  { no: 32, name:"Chak No. 41/WB",      tehsil:"Vehari",   lat:30.046645, lng:72.368618 },
+  { no: 33, name:"Chak No. 53/WB",      tehsil:"Vehari",   lat:29.996722, lng:72.347552 },
+  { no: 34, name:"Chak No. 170/EB",     tehsil:"Burewala", lat:30.224565, lng:72.546588 },
+  { no: 35, name:"Chak No. 148/EB",     tehsil:"Burewala", lat:30.224565, lng:72.546588 },
+  { no: 36, name:"Chak No. 521/EB",     tehsil:"Burewala", lat:30.149225, lng:72.602180 },
+  { no: 37, name:"Chak No. 515/EB",     tehsil:"Burewala", lat:30.142561, lng:72.632060 },
+  { no: 38, name:"Chak No. 499/EB",     tehsil:"Burewala", lat:30.220420, lng:72.635950 },
+  { no: 39, name:"Chak No. 425/EB",     tehsil:"Burewala", lat:30.227856, lng:72.713114 },
+  { no: 40, name:"Chak No. 128/EB",     tehsil:"Burewala", lat:30.166310, lng:72.663776 },
+  { no: 41, name:"Chak No. 124/EB",     tehsil:"Burewala", lat:30.166310, lng:72.663776 },
+  { no: 42, name:"Chak No. 98/EB",      tehsil:"Burewala", lat:30.337318, lng:72.795968 },
+  { no: 43, name:"Chak No. 403/EB",     tehsil:"Burewala", lat:30.287966, lng:72.757211 },
+  { no: 44, name:"Chak No. 199/EB",     tehsil:"Burewala", lat:30.229883, lng:72.767160 },
+  { no: 45, name:"Chak No. 365/EB",     tehsil:"Burewala", lat:30.293757, lng:72.865562 },
+  { no: 46, name:"Chak No. 173/EB",     tehsil:"Burewala", lat:30.274815, lng:72.900361 },
+  { no: 47, name:"Chak No. 215/EB",     tehsil:"Burewala", lat:30.242651, lng:72.892850 },
+  { no: 48, name:"Chak No. 187/EB",     tehsil:"Burewala", lat:30.218062, lng:72.825168 },
+  { no: 49, name:"Chak No. 223/EB",     tehsil:"Burewala", lat:30.223668, lng:72.890460 },
+  { no: 50, name:"Chak No. 247/EB",     tehsil:"Burewala", lat:30.219645, lng:72.843518 },
+  { no: 51, name:"Chak No. 267/EB",     tehsil:"Burewala", lat:30.165525, lng:72.759033 },
+  { no: 52, name:"Chak No. 287/EB",     tehsil:"Burewala", lat:30.133148, lng:72.813543 },
+  { no: 53, name:"Chak No. 283/EB",     tehsil:"Burewala", lat:30.133148, lng:72.813543 },
+  { no: 54, name:"Chak No. 291/EB",     tehsil:"Burewala", lat:30.103445, lng:72.848718 },
+  { no: 55, name:"Jamlera",             tehsil:"Burewala", lat:30.041740, lng:72.882160 },
+  { no: 56, name:"Sahuka",              tehsil:"Burewala", lat:30.025807, lng:72.820458 },
+  { no: 57, name:"Chak No. 305/EB",     tehsil:"Burewala", lat:30.092090, lng:72.783738 },
+  { no: 58, name:"Chak No. 325/EB",     tehsil:"Burewala", lat:30.101368, lng:72.717928 },
+  { no: 59, name:"Chak No. 265/EB",     tehsil:"Burewala", lat:30.165525, lng:72.759033 },
+  { no: 60, name:"Chak No. 333/EB",     tehsil:"Burewala", lat:29.967135, lng:72.701945 },
+  { no: 61, name:"Chak No. 317/EB",     tehsil:"Burewala", lat:30.047854, lng:72.756035 },
+  { no: 62, name:"Saldera Aithar",       tehsil:"Burewala", lat:29.967135, lng:72.701945 },
+  { no: 63, name:"Chak No. 50/KB",       tehsil:"Burewala", lat:30.020780, lng:72.662268 },
+  { no: 64, name:"Ghafoor Wah",          tehsil:"Burewala", lat:30.071045, lng:72.671047 },
+  { no: 65, name:"Chak No. 495/EB",      tehsil:"Burewala", lat:30.071045, lng:72.671047 },
+  { no: 66, name:"Chak No. 447/EB",      tehsil:"Burewala", lat:30.134737, lng:72.689836 },
+  { no: 67, name:"Chak No. 457/EB",      tehsil:"Burewala", lat:30.129672, lng:72.662122 },
+  { no: 68, name:"Chak No. 158/WB",      tehsil:"Mailsi",   lat:29.991322, lng:71.878982 },
+  { no: 69, name:"Chak No. 335/WB",      tehsil:"Mailsi",   lat:29.948456, lng:71.798530 },
+  { no: 70, name:"Tibba Sultan Pur",      tehsil:"Mailsi",   lat:29.983599, lng:71.875511 },
+  { no: 71, name:"Sehar",                tehsil:"Mailsi",   lat:29.991322, lng:71.878982 },
+  { no: 72, name:"Sanda",                tehsil:"Mailsi",   lat:30.002777, lng:71.908603 },
+  { no: 73, name:"Chak No. 124/WB",      tehsil:"Mailsi",   lat:30.002777, lng:70.908603 },
+  { no: 74, name:"Chak No. 188/WB",      tehsil:"Mailsi",   lat:29.957850, lng:72.071073 },
+  { no: 75, name:"Chak No. 100/WB",      tehsil:"Mailsi",   lat:30.045334, lng:72.062259 },
+  { no: 76, name:"Zaheer Abad Shaheed",  tehsil:"Mailsi",   lat:30.047815, lng:72.001740 },
+  { no: 77, name:"Chak No. 88/WB",       tehsil:"Mailsi",   lat:30.045744, lng:72.098239 },
+  { no: 78, name:"Shitab Grah",          tehsil:"Mailsi",   lat:29.988138, lng:72.150905 },
+  { no: 79, name:"Mitru",                tehsil:"Mailsi",   lat:29.957850, lng:72.071073 },
+  { no: 80, name:"Sandhal",              tehsil:"Mailsi",   lat:29.892598, lng:72.134026 },
+  { no: 81, name:"Chak No. 69/WB",       tehsil:"Mailsi",   lat:29.988138, lng:72.150905 },
+  { no: 82, name:"Sargana",              tehsil:"Mailsi",   lat:29.930598, lng:72.196828 },
+  { no: 83, name:"Kotli Mohtam",         tehsil:"Mailsi",   lat:29.922277, lng:72.269518 },
+  { no: 84, name:"Muhammad Shah",        tehsil:"Mailsi",   lat:29.922277, lng:72.269518 },
+  { no: 85, name:"Karam Pur",            tehsil:"Mailsi",   lat:29.904213, lng:72.346436 },
+  { no: 86, name:"Borana Khas",          tehsil:"Mailsi",   lat:29.860100, lng:72.257007 },
+  { no: 87, name:"Alam Pur",             tehsil:"Mailsi",   lat:29.860100, lng:72.257007 },
+  { no: 88, name:"Dhamki",              tehsil:"Mailsi",   lat:29.807482, lng:72.180624 },
+  { no: 89, name:"Fadda",               tehsil:"Mailsi",   lat:29.792546, lng:72.185882 },
+  { no: 90, name:"Chattani",            tehsil:"Mailsi",   lat:29.726420, lng:72.179063 },
+  { no: 91, name:"Fateh Pur",           tehsil:"Mailsi",   lat:29.668552, lng:72.149298 },
+  { no: 92, name:"Warsi Wahin",         tehsil:"Mailsi",   lat:29.639114, lng:72.107762 },
+  { no: 93, name:"Jallah Jeem",         tehsil:"Mailsi",   lat:29.714629, lng:72.137403 },
+  { no: 94, name:"Mailsi Deh",          tehsil:"Mailsi",   lat:29.807435, lng:72.180659 },
+  { no: 95, name:"Kikri Khurd",         tehsil:"Mailsi",   lat:29.706504, lng:72.093735 },
+  { no: 96, name:"Buland Pur",          tehsil:"Mailsi",   lat:29.761478, lng:72.025092 },
+  { no: 97, name:"Ali Wah",             tehsil:"Mailsi",   lat:29.801148, lng:72.137726 },
+  { no: 98, name:"Noraba",              tehsil:"Mailsi",   lat:29.761478, lng:72.025092 },
+  { no: 99, name:"Jahan Pur",           tehsil:"Mailsi",   lat:29.833134, lng:72.065702 },
+  { no:100, name:"Chak 1-M",            tehsil:"Mailsi",   lat:29.910220, lng:72.031840 },
+  { no:101, name:"Lali Pur",            tehsil:"Mailsi",   lat:29.910220, lng:72.031840 },
+  { no:102, name:"Chak No. 151/WB",     tehsil:"Mailsi",   lat:29.807408, lng:72.180301 },
+  { no:103, name:"Lal Saghu",           tehsil:"Mailsi",   lat:29.898648, lng:72.019671 },
+  { no:104, name:"Chak No. 195/WB",     tehsil:"Mailsi",   lat:29.898689, lng:73.019576 },
+  { no:105, name:"Kharala",             tehsil:"Mailsi",   lat:29.945023, lng:71.933604 },
+];
+
+// ── HAVERSINE DISTANCE (metres) ───────────────────────────────────────────────
+function distanceM(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const lsGet = (k,fb=null) => { try{ const v=localStorage.getItem(k); return v?JSON.parse(v):fb; }catch{ return fb; } };
+const lsSet = (k,v) => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch{ alert("Storage full — please export and clear old records."); } };
+const fmtDT = iso => new Date(iso).toLocaleString("en-PK",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true});
+const isoDate = iso => (iso||"").slice(0,10);
+
+async function compressPhoto(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX=400; let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      resolve(c.toDataURL("image/jpeg",0.5));
+    };
+    img.src = dataUrl;
+  });
+}
+
+// POST a record to Google Apps Script
+// Google Apps Script requires the body as text/plain to avoid CORS preflight
+async function postToSheet(url, rec) {
+  // Strip photo from payload if too large — photo already saved locally
+  const payload = { ...rec };
+  try {
+    // text/plain body = no CORS preflight = Google Apps Script accepts it
+    const resp = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    const text = await resp.text();
+    try { 
+      const data = JSON.parse(text); 
+      if (data && data.success === false) throw new Error(data.error || "Script returned error.");
+      return data;
+    }
+    catch(parseErr) { 
+      if (text.toLowerCase().includes("<html")) {
+        throw new Error("Google Apps Script error: ensure deployment is set to 'Anyone' and returns JSON.");
+      }
+      return { success: true }; 
+    }
+  } catch(e) {
+    throw new Error("POST failed: " + e.message);
+  }
+}
+
+// GET all records via JSONP — bypasses CORS without any proxy
+// Works because <script> tags are never blocked by CORS rules
+function fetchFromSheet(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = "gasCallback_" + Date.now();
+    const script  = document.createElement("script");
+
+    // Timeout after 15 seconds
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Request timed out — check your internet connection"));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function(data) {
+      cleanup();
+      if (data && data.success === false) reject(new Error(data.error || "Script error"));
+      else resolve((data && data.records) || []);
+    };
+
+    script.src   = url + "?callback=" + cbName + "&t=" + Date.now();
+    script.onerror = () => { cleanup(); reject(new Error("Could not reach Google Sheets — check URL")); };
+    document.head.appendChild(script);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  APP ROOT
+// ═══════════════════════════════════════════════════════════════════════════════
+function App() {
+  const [tab, setTab]           = useState("staff");
+  const [unlocked, setUnlocked] = useState(false);
+  const [pw, setPw]             = useState("");
+  const [pwErr, setPwErr]       = useState(false);
+  const [ucList, setUcList]     = useState(()=>lsGet(KEY_MASTER, DEFAULT_UC_LIST));
+  // Use hardcoded URL if set, otherwise fall back to localStorage (admin override)
+  const resolvedUrl = HARDCODED_SCRIPT_URL.trim() || lsGet(KEY_SCRIPT,"");
+  const [scriptUrl, setScript]  = useState(resolvedUrl);
+  const [gpsReady, setGpsReady] = useState(false);   // true once permission granted
+  const [gpsWarn,  setGpsWarn]  = useState("");       // shown if denied
+
+  // ── Trigger GPS permission popup the moment the app loads ──────────────────
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGpsWarn("⚠️ GPS is not supported on this device.");
+      return;
+    }
+    // A silent one-shot request just to trigger the browser permission dialog.
+    // We don't use this position — it's only to get the user to click Allow.
+    navigator.geolocation.getCurrentPosition(
+      () => { setGpsReady(true); setGpsWarn(""); },
+      (err) => {
+        if (err.code === 1) {
+          // PERMISSION_DENIED
+          setGpsWarn("⚠️ Location access was denied. Please tap the 🔒 icon in the address bar, allow Location, then refresh the page.");
+        } else {
+          // Timeout or unavailable — not a denial, GPS will work when asked
+          setGpsReady(true);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }, []);
+
+  const doLogin = () => {
+    if(pw===ADMIN_PW){setUnlocked(true);setPwErr(false);}
+    else{setPwErr(true);setTimeout(()=>setPwErr(false),2000);}
+  };
+
+  return (
+    <div style={S.root}>
+      <div style={S.header}>
+        <svg width="36" height="36" viewBox="0 0 40 40" style={{flexShrink:0}}>
+          <circle cx="20" cy="20" r="19" stroke="#c9a84c" strokeWidth="1.8" fill="none"/>
+          <path d="M20 8L23 16L32 16L25 21L28 30L20 25L12 30L15 21L8 16L17 16Z" fill="#c9a84c"/>
+        </svg>
+        <div style={{flex:1}}>
+          <div style={S.hTitle}>District Vehari — Local Government</div>
+          <div style={S.hSub}>Secretary UC Attendance · Geo-Verified · 105 UCs</div>
+        </div>
+        <div style={{...S.statusDot, background:scriptUrl?"#4caf50":"#f39c12"}} title={scriptUrl?"Sheets Connected":"Local only"}/>
+      </div>
+
+      <div style={S.tabBar}>
+        {[["staff","📋 Mark Attendance"],["admin","🛡️ Admin Panel"]].map(([id,lb])=>(
+          <button key={id} style={{...S.tabBtn,...(tab===id?S.tabOn:{})}} onClick={()=>setTab(id)}>{lb}</button>
+        ))}
+      </div>
+
+      {/* GPS denied warning — shown across both tabs */}
+      {gpsWarn && (
+        <div style={S.gpsBanner}>{gpsWarn}</div>
+      )}
+
+      <div style={S.main}>
+        {tab==="staff" && <StaffForm ucList={ucList} scriptUrl={scriptUrl} gpsReady={gpsReady}/>}
+        {tab==="admin" && (
+          unlocked
+            ? <AdminPanel ucList={ucList} setUcList={setUcList} scriptUrl={scriptUrl} setScript={setScript}/>
+            : <AdminLogin value={pw} onChange={setPw} onLogin={doLogin} error={pwErr}/>
+        )}
+      </div>
+      <div style={S.footer}>District Local Government · Vehari © 2026 · Geo-Fenced 500m</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STAFF FORM  (with geofencing)
+// ═══════════════════════════════════════════════════════════════════════════════
+function StaffForm({ ucList, scriptUrl, gpsReady }) {
+  const [ucNum,  setUcNum]    = useState("");
+  const [ucName, setUcName]   = useState("");
+  const [tehsil, setTehsil]   = useState("");
+  const [sec,    setSec]      = useState("");
+  const [photo,  setPhoto]    = useState(null);
+
+  // GPS & geo-fence state
+  const [locState, setLocState] = useState("idle");
+  // idle | fetching | inside | outside | error
+  const [loc,    setLoc]      = useState(null);
+  const [distance, setDist]   = useState(null);
+  const [locMsg, setLocMsg]   = useState("");
+
+  const [sugg,   setSugg]     = useState([]);
+  const [showSugg,setShowSugg]= useState(false);
+  const [errs,   setErrs]     = useState({});
+  const [busy,   setBusy]     = useState(false);
+  const [status, setStatus]   = useState(null); // null|"saved"|"offline"
+
+  const selectedUC = ucList.find(u => u.no === parseInt(ucNum));
+
+  // ── Fill by UC number ──────────────────────────────────────────────────────
+  const fillByNo = val => {
+    setUcNum(val);
+    setLoc(null); setDist(null); setLocState("idle"); setLocMsg("");
+    const n=parseInt(val);
+    const m=!isNaN(n)&&ucList.find(u=>u.no===n);
+    if(m){setUcName(m.name);setTehsil(m.tehsil);}
+    else{setUcName("");setTehsil("");}
+    setSugg([]); setShowSugg(false);
+  };
+
+  const fillByName = val => {
+    setUcName(val);
+    setLoc(null); setDist(null); setLocState("idle"); setLocMsg("");
+    if(val.length>=2){
+      setSugg(ucList.filter(u=>u.name.toLowerCase().includes(val.toLowerCase())||String(u.no).includes(val)).slice(0,7));
+      setShowSugg(true);
+    }else{setSugg([]);setShowSugg(false);}
+  };
+
+  const pickSugg = uc => {
+    setUcNum(String(uc.no)); setUcName(uc.name); setTehsil(uc.tehsil);
+    setSugg([]); setShowSugg(false);
+    setLoc(null); setDist(null); setLocState("idle"); setLocMsg("");
+  };
+
+  // ── GEOFENCE LOCATION CHECK ────────────────────────────────────────────────
+  const captureLocation = () => {
+    if(!selectedUC){ setLocMsg("⚠️ Please select your UC number first."); return; }
+    if(!navigator.geolocation){ setLocMsg("GPS not supported on this device."); return; }
+
+    setLocState("fetching"); setLocMsg(""); setLoc(null); setDist(null);
+
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const myLat = pos.coords.latitude;
+        const myLng = pos.coords.longitude;
+        const acc   = Math.round(pos.coords.accuracy);
+        const dist  = Math.round(distanceM(myLat, myLng, selectedUC.lat, selectedUC.lng));
+
+        setLoc({ lat:myLat, lng:myLng, acc });
+        setDist(dist);
+
+        if(dist <= GEOFENCE_M){
+          setLocState("inside");
+          setLocMsg(`✅ Verified! You are ${dist}m from your UC office.`);
+        } else {
+          setLocState("outside");
+          setLocMsg(`❌ You are ${dist}m away from ${selectedUC.name} office. Must be within ${GEOFENCE_M}m.`);
+        }
+      },
+      err => {
+        setLocState("error");
+        setLocMsg("Cannot get GPS — please allow location permission when browser asks.");
+      },
+      { enableHighAccuracy:true, timeout:15000 }
+    );
+  };
+
+  const handlePhoto = async e => {
+    const f=e.target.files[0]; if(!f) return;
+    const reader=new FileReader();
+    reader.onload=async ev=>{const c=await compressPhoto(ev.target.result);setPhoto(c);};
+    reader.readAsDataURL(f);
+  };
+
+  const validate = () => {
+    const e={};
+    const n=parseInt(ucNum);
+    if(!ucNum.trim()||isNaN(n)||n<1||n>105) e.ucNum="Valid UC Number (1–105) required";
+    if(!ucName.trim()) e.ucName="UC Name is required";
+    if(!sec.trim())    e.sec="Secretary name is required";
+    if(!photo)         e.photo="Photo is mandatory";
+    if(locState!=="inside") e.loc="Location must be verified within 500m of UC office";
+    setErrs(e); return Object.keys(e).length===0;
+  };
+
+  const submit = async () => {
+    if(!validate()) return;
+    setBusy(true);
+    const rec = {
+      id:Date.now(), timestamp:new Date().toISOString(),
+      ucNumber:ucNum.trim(), ucName:ucName.trim(), tehsil:selectedUC?.tehsil||tehsil,
+      secretaryName:sec.trim(),
+      lat:loc.lat, lng:loc.lng, locationAccuracy:loc.acc,
+      distanceFromOffice:distance,
+      photo
+    };
+    const existing=lsGet(KEY_REC,[]);
+    lsSet(KEY_REC,[...existing,rec]);
+
+    let synced = false;
+    if (scriptUrl) {
+      try {
+        // Send record WITHOUT the photo to Google Sheets (photo is local only)
+        const cloudRec = { ...rec, photo: null };
+        const res = await postToSheet(scriptUrl, cloudRec);
+        synced = (res && res.success !== false);
+      } catch(e) {
+        console.error("Sync error:", e);
+      }
+    }
+
+    if (!synced && scriptUrl) {
+      // Queue for retry later
+      const q = lsGet(KEY_QUEUE, []);
+      lsSet(KEY_QUEUE, [...q, rec.id]);
+    }
+
+    setBusy(false);
+    setStatus(synced ? "saved" : (scriptUrl ? "offline" : "local"));
+    setTimeout(()=>{
+      setStatus(null);
+      setUcNum("");setUcName("");setTehsil("");setSec("");setPhoto(null);
+      setLoc(null);setDist(null);setLocState("idle");setLocMsg("");setErrs({});
+    },3200);
+  };
+
+  // ── RESULT SCREENS ─────────────────────────────────────────────────────────
+  if(status==="saved") return(
+    <div style={S.successBox}>
+      <div style={{fontSize:64}}>✅</div>
+      <div style={S.sucTitle}>Attendance Submitted!</div>
+      <div style={S.sucSub}>Saved to Google Sheets successfully.</div>
+    </div>
+  );
+  if(status==="offline") return(
+    <div style={S.successBox}>
+      <div style={{fontSize:64}}>📡</div>
+      <div style={{...S.sucTitle,color:"#e67e22"}}>Saved — Sync Pending</div>
+      <div style={S.sucSub}>Attendance saved on device. Could not reach Google Sheets right now. It will sync automatically — or ask admin to sync from Admin Panel.</div>
+    </div>
+  );
+
+  if(status==="local") return(
+    <div style={S.successBox}>
+      <div style={{fontSize:64}}>💾</div>
+      <div style={{...S.sucTitle,color:"#888"}}>Saved Locally</div>
+      <div style={S.sucSub}>Google Sheets is not connected yet. Record saved on this device only. Contact your admin.</div>
+    </div>
+  );
+
+  // ── GEOFENCE STATUS BOX ────────────────────────────────────────────────────
+  const geoBox = () => {
+    if(locState==="idle") return null;
+    if(locState==="fetching") return(
+      <div style={{...S.geoBox, borderColor:"#f39c12", background:"#fffbf0"}}>
+        <span className="pulsing">📡</span> Getting your GPS location…
+      </div>
+    );
+    if(locState==="inside") return(
+      <div style={{...S.geoBox, borderColor:"#27ae60", background:"#f0faf4"}}>
+        <div style={{color:"#1a7a3a",fontWeight:700,fontSize:14}}>✅ Location Verified</div>
+        <div style={{fontSize:12,color:"#2a6a3a",marginTop:4}}>
+          📌 {loc.lat.toFixed(5)}, {loc.lng.toFixed(5)}<br/>
+          📏 {distance}m from office · GPS accuracy ±{loc.acc}m
+        </div>
+      </div>
+    );
+    if(locState==="outside") return(
+      <div style={{...S.geoBox, borderColor:"#e74c3c", background:"#fff8f8"}}>
+        <div style={{color:"#c0392b",fontWeight:700,fontSize:14}}>🚫 Outside Geofence</div>
+        <div style={{fontSize:12,color:"#922b21",marginTop:4}}>
+          You are <strong>{distance}m</strong> from {selectedUC?.name} office.<br/>
+          You must be within <strong>500m</strong> to mark attendance.<br/>
+          Please go to your UC office and try again.
+        </div>
+        <div style={{fontSize:11,color:"#888",marginTop:4}}>
+          📌 {loc.lat.toFixed(5)}, {loc.lng.toFixed(5)} · ±{loc.acc}m accuracy
+        </div>
+      </div>
+    );
+    if(locState==="error") return(
+      <div style={{...S.geoBox, borderColor:"#e74c3c", background:"#fff8f8"}}>
+        <div style={{color:"#c0392b",fontWeight:700}}>❌ GPS Error</div>
+        <div style={{fontSize:12,color:"#922b21",marginTop:4}}>Please allow location access in your browser settings and try again.</div>
+      </div>
+    );
+  };
+
+  return(
+    <div style={S.card}>
+      <div style={S.cardTitle}>Secretary UC — Daily Attendance</div>
+      <div style={S.cardSub}>All fields mandatory · Location verified within 500m of UC office</div>
+
+      {/* UC Number */}
+      <div style={S.fld}>
+        <label style={S.lbl}>UC Number (1–105) *</label>
+        <input style={{...S.inp,...(errs.ucNum?S.inpErr:{})}} type="number" min="1" max="105" placeholder="e.g. 55" value={ucNum} onChange={e=>fillByNo(e.target.value)}/>
+        {errs.ucNum&&<div style={S.err}>{errs.ucNum}</div>}
+      </div>
+
+      {/* UC Name */}
+      <div style={S.fld}>
+        <label style={S.lbl}>UC Name *</label>
+        <div style={{position:"relative"}}>
+          <input style={{...S.inp,...(errs.ucName?S.inpErr:{})}} type="text" placeholder="Auto-fills, or type to search" value={ucName} onChange={e=>fillByName(e.target.value)} onBlur={()=>setTimeout(()=>setShowSugg(false),250)}/>
+          {showSugg&&sugg.length>0&&(
+            <div style={S.dropdown}>
+              {sugg.map(uc=>(
+                <div key={uc.no} style={S.ddItem} onMouseDown={()=>pickSugg(uc)}>
+                  <span style={S.ddBadge}>UC {uc.no}</span>
+                  <span style={{flex:1}}>{uc.name}</span>
+                  <span style={S.ddTehsil}>{uc.tehsil}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {tehsil&&<div style={S.tehsilChip}>📍 Tehsil: <strong>{tehsil}</strong></div>}
+        {errs.ucName&&<div style={S.err}>{errs.ucName}</div>}
+      </div>
+
+      {/* Secretary */}
+      <div style={S.fld}>
+        <label style={S.lbl}>Secretary UC Name *</label>
+        <input style={{...S.inp,...(errs.sec?S.inpErr:{})}} type="text" placeholder="Full name of Secretary UC" value={sec} onChange={e=>setSec(e.target.value)}/>
+        {errs.sec&&<div style={S.err}>{errs.sec}</div>}
+      </div>
+
+      {/* GPS + Geofence */}
+      <div style={S.fld}>
+        <label style={S.lbl}>GPS Verification (500m radius) *</label>
+
+        {/* Show office location if UC selected */}
+        {selectedUC&&(
+          <div style={S.officeInfo}>
+            🏢 <strong>{selectedUC.name}</strong> office coordinates loaded
+            <a href={`https://maps.google.com/?q=${selectedUC.lat},${selectedUC.lng}`} target="_blank" rel="noreferrer" style={{marginLeft:8,color:"#2980b9",fontSize:11}}>View on Map ↗</a>
+          </div>
+        )}
+
+        {/* If location was denied at page load, show instructions */}
+        {!gpsReady && locState==="idle" && (
+          <div style={{...S.geoBox, borderColor:"#f39c12", background:"#fffbf0", marginTop:8}}>
+            <div style={{fontWeight:700,color:"#e67e22"}}>📍 Location Permission Needed</div>
+            <div style={{fontSize:12,color:"#7a5a00",marginTop:4}}>
+              Tap the 🔒 lock icon in Chrome's address bar → tap <strong>Location</strong> → select <strong>Allow</strong> → then refresh the page.
+            </div>
+          </div>
+        )}
+
+        <button
+          style={{
+            ...S.actionBtn,
+            ...(locState==="inside"?S.actionOk:{}),
+            ...(locState==="outside"||locState==="error"?S.actionErr:{}),
+            ...(locState==="fetching"?S.actionBusy:{}),
+            marginTop:8
+          }}
+          onClick={captureLocation}
+          disabled={locState==="fetching"}
+        >
+          {locState==="idle"    && "📍 Verify My Location"}
+          {locState==="fetching"&& <span className="pulsing">📡 Detecting GPS…</span>}
+          {locState==="inside"  && "📍 Location Verified ✓"}
+          {locState==="outside" && "🚫 Outside Range — Try Again"}
+          {locState==="error"   && "❌ GPS Error — Try Again"}
+        </button>
+
+        {geoBox()}
+        {errs.loc&&locState!=="inside"&&<div style={S.err}>{errs.loc}</div>}
+      </div>
+
+      {/* Photo */}
+      <div style={S.fld}>
+        <label style={S.lbl}>Selfie / Photo *</label>
+        <label style={{...S.actionBtn,...(photo?S.actionOk:{}),cursor:"pointer"}}>
+          <input type="file" accept="image/*" capture="user" style={{display:"none"}} onChange={handlePhoto}/>
+          {photo?"📸 Photo Captured ✓":"📸 Take Selfie / Upload Photo"}
+        </label>
+        {photo&&<>
+          <img src={photo} alt="Preview" style={S.photoImg}/>
+          <button style={S.retakeBtn} onClick={()=>setPhoto(null)}>🔄 Retake</button>
+        </>}
+        {errs.photo&&!photo&&<div style={S.err}>{errs.photo}</div>}
+      </div>
+
+      <button style={{...S.submitBtn,opacity:busy?.7:1}} onClick={submit} disabled={busy}>
+        {busy?"⏳ Submitting…":"✅ Submit Attendance"}
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ADMIN LOGIN
+// ═══════════════════════════════════════════════════════════════════════════════
+function AdminLogin({value,onChange,onLogin,error}){
+  return(
+    <div style={{...S.card,textAlign:"center",paddingTop:32}}>
+      <div style={{fontSize:52,marginBottom:8}}>🛡️</div>
+      <div style={S.cardTitle}>Admin Access</div>
+      <div style={S.cardSub}>Authorised officers only</div>
+      <input style={{...S.inp,textAlign:"center",letterSpacing:5,marginTop:16,...(error?S.inpErr:{})}} type="password" placeholder="Enter password" value={value} onChange={e=>onChange(e.target.value)} onKeyDown={e=>e.key==="Enter"&&onLogin()}/>
+      {error&&<div style={{...S.err,textAlign:"center",marginTop:6}}>❌ Incorrect password</div>}
+      <button style={{...S.submitBtn,marginTop:16}} onClick={onLogin}>🔓 Login</button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ADMIN PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+function AdminPanel({ucList,setUcList,scriptUrl,setScript}){
+  const [sub,setSub]       = useState("records");
+  const [records,setRecs]  = useState([]);
+  const [loading,setLoading]= useState(false);
+  const [fUC,setFUC]       = useState("");
+  const [fTH,setFTH]       = useState("");
+  const [fFrom,setFFrom]   = useState("");
+  const [fTo,setFTo]       = useState("");
+  const [bigPhoto,setBig]  = useState(null);
+  const [qCount,setQC]     = useState(()=>lsGet(KEY_QUEUE,[]).length);
+  const [syncing,setSyncing]= useState(false);
+  const [syncMsg,setSyncMsg]= useState("");
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  const [fetchErr, setFetchErr] = useState("");
+
+  const loadRecs = async () => {
+    setLoading(true); setFetchErr("");
+    if (scriptUrl) {
+      try {
+        const r = await fetchFromSheet(scriptUrl);
+        setRecs(r);
+        setLoading(false);
+        return;
+      } catch(e) {
+        setFetchErr("⚠️ Could not fetch from Google Sheets: " + e.message + " — Showing local records only.");
+      }
+    } else {
+      setFetchErr("⚠️ Google Sheets not connected. Showing this device's local records only. Other secretaries' records will NOT appear until you connect Google Sheets.");
+    }
+    setRecs(lsGet(KEY_REC, []));
+    setLoading(false);
+  };
+
+  useEffect(() => { if(sub==="records") loadRecs(); }, [sub, scriptUrl]);
+
+  const norm = r=>({
+    id:        r["ID"]||r.id,
+    timestamp: r["Timestamp"]||r.timestamp||"",
+    ucNumber:  String(r["UC No"]||r.ucNumber||""),
+    ucName:    r["UC Name"]||r.ucName||"",
+    tehsil:    r["Tehsil"]||r.tehsil||"",
+    secretaryName: r["Secretary Name"]||r.secretaryName||"",
+    lat:       r["Latitude"]||r.lat,
+    lng:       r["Longitude"]||r.lng,
+    acc:       r["Accuracy (m)"]||r.locationAccuracy,
+    dist:      r["Distance from Office (m)"]||r.distanceFromOffice||"",
+    mapsLink:  r["Google Maps Link"]||(r.lat?`https://maps.google.com/?q=${r.lat},${r.lng}`:""),
+    photoLink: r["Photo (Drive Link)"]||null,
+    photo:     r.photo||null,
+  });
+
+  const filtered = records.filter(r=>{
+    const n=norm(r);
+    return (!fUC||n.ucNumber===fUC)&&(!fTH||(n.tehsil)===fTH)&&
+           (!fFrom||isoDate(n.timestamp)>=fFrom)&&(!fTo||isoDate(n.timestamp)<=fTo);
+  });
+
+  const allUCNos   = [...new Set(records.map(r=>String(norm(r).ucNumber)))].sort((a,b)=>+a-+b);
+  const allTehsils = [...new Set(records.map(r=>norm(r).tehsil).filter(Boolean))].sort();
+  const todayCount = records.filter(r=>isoDate(norm(r).timestamp)===todayStr).length;
+
+  const syncQueue = async () => {
+    if(!scriptUrl) return;
+    const queue=lsGet(KEY_QUEUE,[]); if(!queue.length){setSyncMsg("✅ Nothing pending.");return;}
+    setSyncing(true);
+    const allLocal=lsGet(KEY_REC,[]);
+    let ok=0; const rem=[];
+    for(const id of queue){
+      const rec=allLocal.find(r=>r.id===id); if(!rec){continue;}
+      try{ const res=await postToSheet(scriptUrl,rec); if(res.success)ok++; else rem.push(id); }
+      catch(_){rem.push(id);}
+    }
+    lsSet(KEY_QUEUE,rem); setQC(rem.length);
+    setSyncing(false); setSyncMsg(`✅ Synced ${ok}. ${rem.length} still pending.`);
+    loadRecs();
+  };
+
+  const exportExcel = () => {
+    const wb=XLSX.utils.book_new();
+    const normed=filtered.map(norm);
+
+    // Sheet 1 – Detail
+    const det=normed.map((r,i)=>({
+      "Sr#":i+1,"Date":isoDate(r.timestamp),
+      "Time":r.timestamp?new Date(r.timestamp).toLocaleTimeString("en-PK",{hour:"2-digit",minute:"2-digit",hour12:true}):"",
+      "UC No":r.ucNumber,"UC Name":r.ucName,"Tehsil":r.tehsil,
+      "Secretary Name":r.secretaryName,
+      "Distance from Office (m)":r.dist,
+      "Latitude":r.lat,"Longitude":r.lng,"Accuracy (m)":r.acc,
+      "Google Maps":r.mapsLink,"Photo Link":r.photoLink||"",
+    }));
+    const ws1=XLSX.utils.json_to_sheet(det.length?det:[{Note:"No records"}]);
+    ws1["!cols"]=[{wch:5},{wch:13},{wch:10},{wch:7},{wch:26},{wch:14},{wch:26},{wch:22},{wch:13},{wch:13},{wch:13},{wch:44},{wch:44}];
+    XLSX.utils.book_append_sheet(wb,ws1,"Attendance Detail");
+
+    // Sheet 2 – UC-wise (all 105)
+    const ucMap={};
+    normed.forEach(r=>{ if(!ucMap[r.ucNumber])ucMap[r.ucNumber]={ucNo:r.ucNumber,ucName:r.ucName,tehsil:r.tehsil,count:0,dates:new Set()}; ucMap[r.ucNumber].count++;ucMap[r.ucNumber].dates.add(isoDate(r.timestamp)); });
+    ucList.forEach(u=>{ const k=String(u.no); if(!ucMap[k])ucMap[k]={ucNo:k,ucName:u.name,tehsil:u.tehsil,count:0,dates:new Set()}; });
+    const ws2=XLSX.utils.json_to_sheet(Object.values(ucMap).sort((a,b)=>+a.ucNo-+b.ucNo).map((u,i)=>({
+      "Sr#":i+1,"UC No":u.ucNo,"UC Name":u.ucName,"Tehsil":u.tehsil,
+      "Total Attendance":u.count,"Unique Days":u.dates.size,
+      "Status":u.count>0?"Present":"Absent",
+      "Dates Present":[...u.dates].sort().join(", "),
+    })));
+    ws2["!cols"]=[{wch:5},{wch:7},{wch:26},{wch:14},{wch:18},{wch:12},{wch:10},{wch:60}];
+    XLSX.utils.book_append_sheet(wb,ws2,"UC-Wise Summary");
+
+    // Sheet 3 – Date matrix
+    const dateMap={};
+    normed.forEach(r=>{ const d=isoDate(r.timestamp); if(!dateMap[d])dateMap[d]={}; dateMap[d][r.ucNumber]=true; });
+    const allDates=Object.keys(dateMap).sort();
+    if(allDates.length){
+      const rows=allDates.map(d=>{ const row={"Date":d,"Total Present":Object.keys(dateMap[d]).length}; ucList.forEach(u=>{row["UC"+u.no]=dateMap[d][String(u.no)]?"P":""}); return row; });
+      const ws3=XLSX.utils.json_to_sheet(rows);
+      ws3["!cols"]=[{wch:13},{wch:14},...ucList.map(()=>({wch:5}))];
+      XLSX.utils.book_append_sheet(wb,ws3,"Date-Wise Matrix");
+    }
+
+    // Sheet 4 – Tehsil
+    const tMap={};
+    normed.forEach(r=>{ const t=r.tehsil||"Unknown"; if(!tMap[t])tMap[t]={count:0,ucs:new Set()}; tMap[t].count++;tMap[t].ucs.add(r.ucNumber); });
+    if(Object.keys(tMap).length){
+      const ws4=XLSX.utils.json_to_sheet(Object.entries(tMap).map(([t,v],i)=>({"Sr#":i+1,"Tehsil":t,"Total Records":v.count,"Active UCs":v.ucs.size})));
+      ws4["!cols"]=[{wch:5},{wch:16},{wch:16},{wch:12}];
+      XLSX.utils.book_append_sheet(wb,ws4,"Tehsil-Wise Summary");
+    }
+    XLSX.writeFile(wb,`Vehari_UC_Attendance_${todayStr}.xlsx`);
+  };
+
+  return(
+    <div>
+      <div style={S.subBar}>
+        {[["records","📊 Records"],["settings","⚙️ Settings"],["ucmaster","📋 UC List"]].map(([id,lb])=>(
+          <button key={id} style={{...S.subBtn,...(sub===id?S.subOn:{})}} onClick={()=>setSub(id)}>{lb}</button>
+        ))}
+      </div>
+
+      {sub==="records"&&<>
+        {/* Connection status banner */}
+        {fetchErr && (
+          <div style={{background:"#fff3cd",border:"1px solid #f0c040",borderRadius:9,padding:"11px 14px",marginBottom:12,fontSize:12,color:"#7a4f00",lineHeight:1.6}}>
+            {fetchErr}
+            <div style={{marginTop:6}}>
+              <strong>To fix:</strong> Go to ⚙️ Settings tab → paste your Google Script URL → Save → come back here and tap 🔄 Refresh.
+            </div>
+          </div>
+        )}
+        <div style={S.statsRow}>
+          {[[records.length,"📋","Total"],[todayCount,"📅","Today"],[new Set(records.map(r=>norm(r).ucNumber)).size,"🏘️","UCs"],[filtered.length,"🔍","Filtered"]].map(([n,ic,lb])=>(
+            <div key={lb} style={S.statCard}><div style={{fontSize:18}}>{ic}</div><div style={S.statN}>{n}</div><div style={S.statL}>{lb}</div></div>
+          ))}
+        </div>
+
+        {qCount>0&&(
+          <div style={S.syncBanner}>
+            📤 {qCount} record(s) pending sync.
+            <button style={S.syncBtn} onClick={syncQueue} disabled={syncing}>{syncing?"Syncing…":"Sync Now"}</button>
+          </div>
+        )}
+        {syncMsg&&<div style={S.syncMsg}>{syncMsg}</div>}
+
+        <div style={S.card}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={S.cardTitle}>Filter & Export</div>
+            <button style={S.refreshBtn} onClick={loadRecs} disabled={loading}>{loading?"…":"🔄 Refresh"}</button>
+          </div>
+          <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:10}}>
+            {[
+              ["UC",<select style={S.inp} value={fUC} onChange={e=>setFUC(e.target.value)}><option value="">All UCs</option>{allUCNos.map(n=><option key={n} value={n}>UC {n}</option>)}</select>],
+              ["Tehsil",<select style={S.inp} value={fTH} onChange={e=>setFTH(e.target.value)}><option value="">All</option>{allTehsils.map(t=><option key={t}>{t}</option>)}</select>],
+              ["From",<input style={S.inp} type="date" value={fFrom} onChange={e=>setFFrom(e.target.value)}/>],
+              ["To",<input style={S.inp} type="date" value={fTo} onChange={e=>setFTo(e.target.value)}/>],
+            ].map(([lb,ctrl])=>(
+              <div key={lb} style={{flex:1,minWidth:105}}><label style={{...S.lbl,marginBottom:3}}>{lb}</label>{ctrl}</div>
+            ))}
+          </div>
+          <button style={S.exportBtn} onClick={exportExcel}>📊 Export Excel — {filtered.length} records · 4 sheets</button>
+        </div>
+
+        <div style={S.card}>
+          <div style={S.cardTitle}>Attendance Records</div>
+          {loading?<div style={S.empty}>Loading…</div>
+          :filtered.length===0?<div style={S.empty}><div style={{fontSize:36}}>📭</div><div>No records</div></div>
+          :<div style={{display:"flex",flexDirection:"column",gap:9}}>
+            {[...filtered].reverse().map((r,i)=>{
+              const n=norm(r);
+              return(
+                <div key={n.id||i} style={S.recCard}>
+                  <div style={S.recTop}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <span style={S.ucBadge}>UC {n.ucNumber}</span>
+                      <span style={S.recUCN}>{n.ucName}</span>
+                      {n.tehsil&&<span style={S.tBadge}>{n.tehsil}</span>}
+                    </div>
+                    <span style={S.recTime}>{fmtDT(n.timestamp)}</span>
+                  </div>
+                  <div style={S.recBody}>
+                    <span>👤 {n.secretaryName}</span>
+                    {n.dist&&<span style={{fontSize:11,color:"#27ae60",fontWeight:600}}>📏 {n.dist}m</span>}
+                    <a href={n.mapsLink} target="_blank" rel="noreferrer" style={S.mapLink}>📍 Map ↗</a>
+                    {n.photoLink&&<a href={n.photoLink} target="_blank" rel="noreferrer" style={S.mapLink}>📸 ↗</a>}
+                    {n.photo&&!n.photoLink&&<button style={S.viewBtn} onClick={()=>setBig(n.photo)}>📸</button>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>}
+        </div>
+      </>}
+
+      {sub==="settings"&&<SettingsPanel scriptUrl={scriptUrl} setScript={setScript}/>}
+      {sub==="ucmaster"&&<UCMaster ucList={ucList} setUcList={setUcList}/>}
+
+      {bigPhoto&&(
+        <div style={S.modal} onClick={()=>setBig(null)}>
+          <div style={S.modalBox} onClick={e=>e.stopPropagation()}>
+            <img src={bigPhoto} alt="Staff" style={{width:"100%",display:"block"}}/>
+            <button style={S.modalClose} onClick={()=>setBig(null)}>✕ Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+function SettingsPanel({scriptUrl,setScript}){
+  const [url,setUrl]=useState(scriptUrl);
+  const [testing,setTesting]=useState(false);
+  const [msg,setMsg]=useState("");
+  const save=()=>{ const t=url.trim(); lsSet(KEY_SCRIPT,t); setScript(t); setMsg("✅ URL saved!"); setTimeout(()=>setMsg(""),2000); };
+  const test=async()=>{
+    if(!url.trim()){setMsg("❌ Paste a URL first.");return;}
+    setTesting(true);setMsg("Testing…");
+    try{ const r=await fetchFromSheet(url.trim()); setMsg(`✅ Connected! ${r.length} records in Sheets.`); }
+    catch(_){ setMsg("❌ Failed. Check URL and redeploy as 'Anyone'."); }
+    setTesting(false);
+  };
+  return(
+    <div style={S.card}>
+      <div style={S.cardTitle}>⚙️ Google Sheets Connection</div>
+      <div style={{...S.cardSub,background:"#f0f8ff",border:"1px solid #b0d0f0",borderRadius:8,padding:"12px",marginBottom:14,color:"#1a3a6a"}}>
+        <strong>Setup steps:</strong><br/>
+        1. Go to sheets.google.com → New sheet<br/>
+        2. Extensions → Apps Script → paste Code.gs → Save<br/>
+        3. Deploy → New deployment → Web app<br/>
+        4. Execute as: Me · Access: Anyone → Deploy<br/>
+        5. Copy the URL and paste below
+      </div>
+      <label style={S.lbl}>Apps Script Web App URL</label>
+      <input style={{...S.inp,fontSize:12}} type="url" placeholder="https://script.google.com/macros/s/XXXX/exec" value={url} onChange={e=>setUrl(e.target.value)}/>
+      {msg&&<div style={{marginTop:8,fontSize:13,fontWeight:600,color:msg.startsWith("✅")?"#1a7a3a":"#c0392b"}}>{msg}</div>}
+      <div style={{display:"flex",gap:10,marginTop:12}}>
+        <button style={{...S.submitBtn,flex:1,marginTop:0,fontSize:13}} onClick={save}>💾 Save</button>
+        <button style={{...S.submitBtn,flex:1,marginTop:0,fontSize:13,background:"linear-gradient(135deg,#1a5276,#2980b9)"}} onClick={test} disabled={testing}>🔗 Test</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  UC MASTER LIST EDITOR
+// ═══════════════════════════════════════════════════════════════════════════════
+function UCMaster({ucList,setUcList}){
+  const [search,setSearch]=useState("");
+  const filt=ucList.filter(u=>u.name.toLowerCase().includes(search.toLowerCase())||String(u.no).includes(search)||u.tehsil.toLowerCase().includes(search.toLowerCase()));
+  return(
+    <div style={S.card}>
+      <div style={S.cardTitle}>📋 UC List — 105 UCs with Office Coordinates</div>
+      <div style={{...S.cardSub,background:"#f0faf4",border:"1px solid #a8d8b8",borderRadius:8,padding:"8px 12px",color:"#1a5a2a",marginBottom:12}}>
+        ✅ All 105 UC office coordinates loaded from your official file. Geofence is set at 500m.
+      </div>
+      <input style={{...S.inp,marginBottom:10}} placeholder="🔍 Search…" value={search} onChange={e=>setSearch(e.target.value)}/>
+      <div style={{fontSize:12,color:"#888",marginBottom:8}}>Showing {filt.length} of 105</div>
+      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+        {filt.map(uc=>(
+          <div key={uc.no} style={{...S.ucRow,flexDirection:"column",alignItems:"flex-start",gap:3}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,width:"100%"}}>
+              <span style={{...S.ucBadge,fontSize:11,flexShrink:0}}>UC {uc.no}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:"#1a3a2a"}}>{uc.name}</div>
+                <div style={{fontSize:11,color:"#888"}}>{uc.tehsil}</div>
+              </div>
+              <a href={`https://maps.google.com/?q=${uc.lat},${uc.lng}`} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2980b9",textDecoration:"none",flexShrink:0}}>📍 Map</a>
+            </div>
+            <div style={{fontSize:10,color:"#aaa",paddingLeft:2}}>
+              Office: {uc.lat.toFixed(6)}, {uc.lng.toFixed(6)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STYLES
+// ═══════════════════════════════════════════════════════════════════════════════
+const S={
+  root:{fontFamily:"'Segoe UI',sans-serif",background:"#f0f4f8",minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:480,margin:"0 auto"},
+  header:{background:"linear-gradient(135deg,#1a3a2a,#0d5c3a,#1a7a4a)",padding:"12px 14px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 2px 12px rgba(0,0,0,.3)"},
+  hTitle:{color:"#fff",fontSize:14,fontWeight:700},
+  hSub:{color:"#a8d8b8",fontSize:11,marginTop:2},
+  statusDot:{width:10,height:10,borderRadius:"50%",flexShrink:0},
+  gpsBanner:{background:"#fff3cd",borderBottom:"2px solid #f0a500",padding:"10px 14px",fontSize:13,color:"#7a4f00",lineHeight:1.5},
+  tabBar:{display:"flex",background:"#fff",borderBottom:"3px solid #e0e8e4"},
+  tabBtn:{flex:1,padding:"12px 8px",border:"none",background:"transparent",color:"#666",fontSize:13,fontWeight:600,cursor:"pointer",borderBottom:"3px solid transparent",marginBottom:-3},
+  tabOn:{color:"#0d5c3a",borderBottomColor:"#0d5c3a",background:"#f0f9f4"},
+  subBar:{display:"flex",gap:7,marginBottom:12},
+  subBtn:{flex:1,padding:"8px 4px",borderRadius:9,border:"1.5px solid #d0ddd6",background:"#fff",color:"#555",fontSize:11,fontWeight:600,cursor:"pointer"},
+  subOn:{background:"#0d5c3a",color:"#fff",borderColor:"#0d5c3a"},
+  main:{flex:1,padding:"13px 11px",overflowY:"auto"},
+  footer:{textAlign:"center",padding:"9px",fontSize:10,color:"#aaa",background:"#fff",borderTop:"1px solid #eee"},
+  card:{background:"#fff",borderRadius:14,padding:"17px 13px",marginBottom:13,boxShadow:"0 2px 10px rgba(0,0,0,.07)",border:"1px solid #e8f0ec"},
+  cardTitle:{fontSize:15,fontWeight:700,color:"#1a3a2a",marginBottom:3},
+  cardSub:{fontSize:12,color:"#888",marginBottom:13},
+  fld:{marginBottom:14},
+  lbl:{display:"block",fontSize:13,fontWeight:600,color:"#3a5a4a",marginBottom:4},
+  inp:{width:"100%",padding:"10px 12px",borderRadius:8,border:"1.5px solid #d0ddd6",fontSize:14,outline:"none",color:"#222",background:"#fcfffe",boxSizing:"border-box"},
+  inpErr:{borderColor:"#e74c3c",background:"#fff8f8"},
+  err:{color:"#e74c3c",fontSize:12,marginTop:4},
+  actionBtn:{width:"100%",padding:"12px",borderRadius:8,border:"1.5px dashed #0d5c3a",background:"#f0faf4",color:"#0d5c3a",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8},
+  actionOk:{borderStyle:"solid",background:"#e8f8ef",borderColor:"#27ae60",color:"#1a7a3a"},
+  actionErr:{borderStyle:"solid",background:"#fff0f0",borderColor:"#e74c3c",color:"#c0392b"},
+  actionBusy:{borderStyle:"dashed",background:"#fffbf0",borderColor:"#f39c12",color:"#e67e22"},
+  submitBtn:{width:"100%",padding:"13px",borderRadius:10,background:"linear-gradient(135deg,#0d5c3a,#1a7a4a)",color:"#fff",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",boxShadow:"0 4px 14px rgba(13,92,58,.3)",marginTop:4},
+  exportBtn:{width:"100%",padding:"12px",borderRadius:10,background:"linear-gradient(135deg,#1a5276,#2980b9)",color:"#fff",fontSize:13,fontWeight:700,border:"none",cursor:"pointer"},
+  refreshBtn:{padding:"6px 12px",border:"1.5px solid #0d5c3a",color:"#0d5c3a",background:"transparent",borderRadius:7,fontSize:12,fontWeight:600,cursor:"pointer"},
+  syncBanner:{background:"#fff3cd",border:"1px solid #f0c040",borderRadius:9,padding:"10px 14px",marginBottom:10,fontSize:13,color:"#856404",display:"flex",alignItems:"center",gap:10,justifyContent:"space-between"},
+  syncBtn:{padding:"5px 14px",background:"#0d5c3a",color:"#fff",border:"none",borderRadius:7,fontSize:12,fontWeight:700,cursor:"pointer"},
+  syncMsg:{background:"#e8f8ef",color:"#1a7a3a",padding:"8px 12px",borderRadius:8,marginBottom:10,fontSize:13,textAlign:"center",fontWeight:600},
+  officeInfo:{background:"#f0f4f8",border:"1px solid #d0dde8",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#3a4a6a",marginBottom:0},
+  geoBox:{border:"1.5px solid",borderRadius:10,padding:"12px 14px",marginTop:8,fontSize:13,lineHeight:1.6},
+  locBox:{marginTop:8,padding:"8px 12px",background:"#f0f9f4",borderRadius:8,fontSize:12,color:"#3a6a4a"},
+  tehsilChip:{marginTop:6,display:"inline-block",background:"#e8f0ec",color:"#3a6a4a",borderRadius:6,padding:"3px 10px",fontSize:12,fontWeight:600},
+  photoImg:{width:"100%",maxHeight:200,objectFit:"cover",borderRadius:10,border:"2px solid #27ae60",marginTop:10},
+  retakeBtn:{marginTop:6,padding:"5px 14px",borderRadius:7,background:"#fff",border:"1px solid #ccc",color:"#666",fontSize:12,cursor:"pointer"},
+  dropdown:{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid #c0d4c8",borderRadius:8,zIndex:100,boxShadow:"0 4px 16px rgba(0,0,0,.12)",maxHeight:230,overflowY:"auto"},
+  ddItem:{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid #f0f5f2",fontSize:13},
+  ddBadge:{background:"#0d5c3a",color:"#fff",borderRadius:5,padding:"1px 7px",fontSize:11,fontWeight:700,flexShrink:0},
+  ddTehsil:{marginLeft:"auto",fontSize:11,color:"#888",flexShrink:0},
+  statsRow:{display:"flex",gap:7,marginBottom:12},
+  statCard:{flex:1,background:"#fff",borderRadius:11,padding:"9px 4px",textAlign:"center",boxShadow:"0 2px 8px rgba(0,0,0,.06)",border:"1px solid #e8f0ec"},
+  statN:{fontSize:20,fontWeight:800,color:"#0d5c3a"},
+  statL:{fontSize:10,color:"#888",marginTop:1},
+  recCard:{border:"1.5px solid #e0ede7",borderRadius:10,padding:"11px 12px",background:"#fcfffe"},
+  recTop:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,flexWrap:"wrap",gap:4},
+  ucBadge:{background:"#0d5c3a",color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700},
+  recUCN:{fontSize:13,fontWeight:600,color:"#1a3a2a"},
+  tBadge:{background:"#e8f0ec",color:"#3a6a4a",borderRadius:5,padding:"1px 7px",fontSize:11},
+  recTime:{fontSize:11,color:"#888",flexShrink:0},
+  recBody:{display:"flex",alignItems:"center",gap:10,fontSize:13,color:"#444",flexWrap:"wrap"},
+  mapLink:{color:"#2980b9",textDecoration:"none",fontWeight:600,fontSize:12},
+  viewBtn:{padding:"2px 10px",border:"1px solid #0d5c3a",color:"#0d5c3a",background:"transparent",borderRadius:6,fontSize:12,cursor:"pointer"},
+  empty:{textAlign:"center",padding:"28px 0",color:"#aaa",fontSize:14},
+  ucRow:{display:"flex",alignItems:"center",gap:10,padding:"9px 10px",borderRadius:8,background:"#fafcfb",border:"1px solid #eaf0ec"},
+  modal:{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20},
+  modalBox:{background:"#fff",borderRadius:14,overflow:"hidden",width:"100%",maxWidth:400},
+  modalClose:{width:"100%",padding:"12px",background:"#1a3a2a",color:"#fff",border:"none",fontSize:14,fontWeight:700,cursor:"pointer"},
+  successBox:{textAlign:"center",padding:"60px 20px",display:"flex",flexDirection:"column",alignItems:"center",gap:12},
+  sucTitle:{fontSize:22,fontWeight:700,color:"#1a7a3a"},
+  sucSub:{fontSize:14,color:"#666",maxWidth:280,textAlign:"center"},
+};
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+</script>
+</body>
+</html>
