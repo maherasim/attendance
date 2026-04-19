@@ -1,10 +1,4 @@
-# ---------------------------------------------------------------------------
-# Many shared hosts return HTTP 500 if ANY .htaccess rule is not allowed.
-# This file is COMMENTS ONLY — it cannot break your site.
-#
-# If index.html opens before index.php: delete the host's welcome index.html
-# or use cPanel → Indexes / Default Document → put index.php first.
-#
-# Optional (only if your host allows it — if site breaks, delete this file):
-# DirectoryIndex index.php index.html
-# ---------------------------------------------------------------------------
+# Vehari UC Attendance (flat PHP in this folder - not Laravel)
+# Open https://your-domain/ -> index.php first
+
+DirectoryIndex index.php index.html
