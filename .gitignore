@@ -1,5 +1,5 @@
 # Local PHP config — copy from config.example.php
-config.php
+ 
 
 # Uploaded attendance photos
 uploads/*
