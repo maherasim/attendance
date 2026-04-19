@@ -4,7 +4,9 @@ declare(strict_types=1);
 function distance_meters(float $lat1, float $lng1, float $lat2, float $lng2): float
 {
     $R = 6371000.0;
-    $toRad = static fn(float $d): float => $d * M_PI / 180.0;
+    $toRad = function (float $d): float {
+        return $d * M_PI / 180.0;
+    };
     $dLat = $toRad($lat2 - $lat1);
     $dLng = $toRad($lng2 - $lng1);
     $a = sin($dLat / 2) ** 2

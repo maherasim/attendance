@@ -1,7 +1,25 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/config.php';
+$configFile = __DIR__ . '/config.php';
+if (!is_readable($configFile)) {
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Setup required</title></head><body>';
+    echo '<h1>Configuration missing</h1>';
+    echo '<p>Copy <code>config.example.php</code> to <code>config.php</code> on the server and set your database credentials.</p>';
+    echo '<p><a href="health.php">Run health.php</a> for diagnostics.</p>';
+    echo '</body></html>';
+    exit;
+}
+require_once $configFile;
+
+if (!defined('GEOFENCE_M')) {
+    define('GEOFENCE_M', 500);
+}
+if (!defined('BYPASS_GEOFENCE')) {
+    define('BYPASS_GEOFENCE', false);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
