@@ -20,40 +20,63 @@ $fUc = $logged && isset($_GET['uc']) ? trim((string) $_GET['uc']) : '';
 $fTh = $logged && isset($_GET['tehsil']) ? trim((string) $_GET['tehsil']) : '';
 $fFrom = $logged && isset($_GET['from']) ? trim((string) $_GET['from']) : '';
 $fTo = $logged && isset($_GET['to']) ? trim((string) $_GET['to']) : '';
+$page = $logged ? max(1, (int) ($_GET['page'] ?? 1)) : 1;
 
 $records = [];
 $stats = ['total' => 0, 'today' => 0, 'ucs' => 0, 'filtered' => 0];
 $tehsils = [];
 $todayStr = (new DateTime('today'))->format('Y-m-d');
+$perPage = 15;
+$totalFiltered = 0;
+$totalPages = 1;
+$showingFrom = 0;
+$showingTo = 0;
 
 if ($logged) {
     $tehsils = $pdo->query('SELECT DISTINCT tehsil FROM uc_offices ORDER BY tehsil')->fetchAll(PDO::FETCH_COLUMN);
 
-    $sql = 'SELECT id, created_at, uc_no, uc_name, tehsil, secretary_name, lat, lng, accuracy_m, distance_m
-            FROM attendance WHERE 1=1';
+    $where = ' FROM attendance WHERE 1=1';
     $params = [];
     if ($fUc !== '') {
-        $sql .= ' AND uc_no = ?';
+        $where .= ' AND uc_no = ?';
         $params[] = (int) $fUc;
     }
     if ($fTh !== '') {
-        $sql .= ' AND tehsil = ?';
+        $where .= ' AND tehsil = ?';
         $params[] = $fTh;
     }
     $calDate = attendance_sql_calendar_date('created_at');
     if ($fFrom !== '') {
-        $sql .= ' AND ' . $calDate . ' >= ?';
+        $where .= ' AND ' . $calDate . ' >= ?';
         $params[] = $fFrom;
     }
     if ($fTo !== '') {
-        $sql .= ' AND ' . $calDate . ' <= ?';
+        $where .= ' AND ' . $calDate . ' <= ?';
         $params[] = $fTo;
     }
-    $sql .= ' ORDER BY id DESC LIMIT 5000';
+
+    $stCount = $pdo->prepare('SELECT COUNT(*)' . $where);
+    $stCount->execute($params);
+    $totalFiltered = (int) $stCount->fetchColumn();
+
+    $totalPages = max(1, (int) ceil($totalFiltered / $perPage));
+    if ($page > $totalPages) {
+        $page = $totalPages;
+    }
+    $offset = ($page - 1) * $perPage;
+
+    $sql = 'SELECT id, created_at, uc_no, uc_name, tehsil, secretary_name, lat, lng, accuracy_m, distance_m'
+        . $where
+        . ' ORDER BY id DESC LIMIT ' . (int) $perPage . ' OFFSET ' . (int) $offset;
 
     $st = $pdo->prepare($sql);
     $st->execute($params);
     $records = $st->fetchAll();
+
+    if ($totalFiltered > 0) {
+        $showingFrom = $offset + 1;
+        $showingTo = min($offset + $perPage, $totalFiltered);
+    }
 
     $allCount = (int) $pdo->query('SELECT COUNT(*) FROM attendance')->fetchColumn();
     $stT = $pdo->prepare('SELECT COUNT(*) FROM attendance WHERE ' . attendance_sql_calendar_date('created_at') . ' = ?');
@@ -65,16 +88,25 @@ if ($logged) {
         'total' => $allCount,
         'today' => $todayCount,
         'ucs' => $ucDistinct,
-        'filtered' => count($records),
+        'filtered' => $totalFiltered,
     ];
 }
 
-$exportQs = http_build_query([
+$filterQs = array_filter([
     'uc' => $fUc,
     'tehsil' => $fTh,
     'from' => $fFrom,
     'to' => $fTo,
-]);
+], static function ($v) {
+    return $v !== '' && $v !== null;
+});
+$exportQs = http_build_query($filterQs);
+
+function admin_pager_url(array $base, int $p): string
+{
+    $q = array_merge($base, ['page' => $p]);
+    return 'admin.php?' . http_build_query($q);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -149,13 +181,18 @@ $exportQs = http_build_query([
         </div>
         <div class="fld fld-actions">
           <button class="btn-secondary" type="submit">Apply</button>
-          <a class="btn-export" href="export.php?<?= h($exportQs) ?>">📊 Export CSV</a>
+          <a class="btn-export" href="export.php?<?= h($exportQs) ?>">📊 Export Excel</a>
         </div>
       </form>
     </div>
 
     <div class="card">
-      <h2 class="card-title">Records</h2>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <h2 class="card-title" style="margin-bottom:0;">Records</h2>
+        <?php if ($totalFiltered > 0): ?>
+        <span class="rec-range"><?= (int) $showingFrom ?>–<?= (int) $showingTo ?> of <?= (int) $totalFiltered ?> · Page <?= (int) $page ?>/<?= (int) $totalPages ?></span>
+        <?php endif; ?>
+      </div>
       <?php if (count($records) === 0): ?>
       <p class="empty">No records match.</p>
       <?php else: ?>
@@ -182,6 +219,21 @@ $exportQs = http_build_query([
         </div>
         <?php endforeach; ?>
       </div>
+      <?php if ($totalPages > 1): ?>
+      <nav class="pager" aria-label="Pagination">
+        <?php if ($page > 1): ?>
+        <a class="pager-btn" href="<?= h(admin_pager_url($filterQs, $page - 1)) ?>">← Prev</a>
+        <?php else: ?>
+        <span class="pager-btn pager-disabled">← Prev</span>
+        <?php endif; ?>
+        <span class="pager-info"><?= (int) $page ?> / <?= (int) $totalPages ?></span>
+        <?php if ($page < $totalPages): ?>
+        <a class="pager-btn" href="<?= h(admin_pager_url($filterQs, $page + 1)) ?>">Next →</a>
+        <?php else: ?>
+        <span class="pager-btn pager-disabled">Next →</span>
+        <?php endif; ?>
+      </nav>
+      <?php endif; ?>
       <?php endif; ?>
     </div>
 

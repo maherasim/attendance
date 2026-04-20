@@ -100,5 +100,12 @@ a{color:#2980b9;}
 
 .empty{text-align:center;padding:28px 0;color:#aaa;font-size:14px;}
 
+.rec-range{font-size:11px;color:#888;font-weight:600;}
+.pager{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid #e8f0ec;flex-wrap:wrap;}
+.pager-btn{display:inline-block;padding:8px 14px;border-radius:8px;border:1.5px solid #0d5c3a;background:#fff;color:#0d5c3a;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;}
+a.pager-btn:hover{background:#f0faf4;}
+.pager-btn.pager-disabled{opacity:.45;cursor:default;border-color:#c8d4ce;color:#888;background:#f5f7f6;}
+.pager-info{font-size:13px;font-weight:700;color:#3a5a4a;}
+
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 .pulsing{animation:pulse 1.4s infinite;}

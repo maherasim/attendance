@@ -1,10 +1,19 @@
-# Local PHP config — copy from config.example.php
- 
+# Local secrets — copy config.example.php → config.php on each machine
+
+
+# Composer dependencies (run `composer install` after clone / on server)
+/vendor/
+
+# Local PHP config template is tracked; real config is not
+# (config.example.php stays in Git)
 
 # Uploaded attendance photos
 uploads/*
 !uploads/.htaccess
 !uploads/index.php
+
+# Composer local
+composer.phar
 
 # OS / editor
 Thumbs.db
