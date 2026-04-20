@@ -11,6 +11,16 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
 
+/** Pakistan Standard Time for admin UI, CSV, and "today" filters */
+define('APP_TIMEZONE', 'Asia/Karachi');
+/**
+ * Zone of the naive DATETIME in DB (what MySQL clock used when saving created_at).
+ * - 'Europe/Berlin' — typical German shared hosting (your live case).
+ * - 'UTC' — if phpMyAdmin / NOW() shows UTC.
+ * - 'Asia/Karachi' — if DB already stores Pakistan wall clock (e.g. some local installs).
+ */
+define('DB_DATETIME_ZONE', 'Europe/Berlin');
+
 define('GEOFENCE_M', 500);
 
 /** Production: false. true = skip 500m geofence (testing only). */

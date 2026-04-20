@@ -20,6 +20,7 @@ if (!defined('GEOFENCE_M')) {
 if (!defined('BYPASS_GEOFENCE')) {
     define('BYPASS_GEOFENCE', false);
 }
+date_default_timezone_set(defined('APP_TIMEZONE') ? APP_TIMEZONE : 'Asia/Karachi');
 ?>
 <!DOCTYPE html>
 <html lang="en">

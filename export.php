@@ -20,12 +20,13 @@ if ($fTh !== '') {
     $sql .= ' AND tehsil = ?';
     $params[] = $fTh;
 }
+$calDate = attendance_sql_calendar_date('created_at');
 if ($fFrom !== '') {
-    $sql .= ' AND DATE(created_at) >= ?';
+    $sql .= ' AND ' . $calDate . ' >= ?';
     $params[] = $fFrom;
 }
 if ($fTo !== '') {
-    $sql .= ' AND DATE(created_at) <= ?';
+    $sql .= ' AND ' . $calDate . ' <= ?';
     $params[] = $fTo;
 }
 $sql .= ' ORDER BY id ASC';
@@ -42,12 +43,17 @@ fputcsv($out, ['ID', 'Date', 'Time', 'UC No', 'UC Name', 'Tehsil', 'Secretary Na
 
 foreach ($rows as $r) {
     $ts = $r['created_at'];
-    $dt = new DateTime($ts);
+    try {
+        $dt = new DateTimeImmutable($ts, new DateTimeZone(defined('DB_DATETIME_ZONE') ? DB_DATETIME_ZONE : 'UTC'));
+        $dt = $dt->setTimezone(new DateTimeZone(defined('APP_TIMEZONE') ? APP_TIMEZONE : 'Asia/Karachi'));
+    } catch (Exception $e) {
+        $dt = null;
+    }
     $maps = 'https://maps.google.com/?q=' . $r['lat'] . ',' . $r['lng'];
     fputcsv($out, [
         $r['id'],
-        $dt->format('Y-m-d'),
-        $dt->format('g:i A'),
+        $dt ? $dt->format('Y-m-d') : $ts,
+        $dt ? ($dt->format('g:i A') . ' PKT') : '',
         $r['uc_no'],
         $r['uc_name'],
         $r['tehsil'],

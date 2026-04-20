@@ -12,6 +12,10 @@ define('DB_USER', 'kommode');
 define('DB_PASS', 'Daniela972757');
 define('DB_CHARSET', 'utf8mb4');
 
+define('APP_TIMEZONE', 'Asia/Karachi');
+/** Live server (kommodoro.de): timestamps saved as German local time — show in PKT */
+define('DB_DATETIME_ZONE', 'Europe/Berlin');
+
 define('GEOFENCE_M', 500);
 
 /** Production: false. true = skip 500m geofence (testing only). */

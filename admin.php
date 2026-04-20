@@ -40,12 +40,13 @@ if ($logged) {
         $sql .= ' AND tehsil = ?';
         $params[] = $fTh;
     }
+    $calDate = attendance_sql_calendar_date('created_at');
     if ($fFrom !== '') {
-        $sql .= ' AND DATE(created_at) >= ?';
+        $sql .= ' AND ' . $calDate . ' >= ?';
         $params[] = $fFrom;
     }
     if ($fTo !== '') {
-        $sql .= ' AND DATE(created_at) <= ?';
+        $sql .= ' AND ' . $calDate . ' <= ?';
         $params[] = $fTo;
     }
     $sql .= ' ORDER BY id DESC LIMIT 5000';
@@ -55,7 +56,7 @@ if ($logged) {
     $records = $st->fetchAll();
 
     $allCount = (int) $pdo->query('SELECT COUNT(*) FROM attendance')->fetchColumn();
-    $stT = $pdo->prepare('SELECT COUNT(*) FROM attendance WHERE DATE(created_at) = ?');
+    $stT = $pdo->prepare('SELECT COUNT(*) FROM attendance WHERE ' . attendance_sql_calendar_date('created_at') . ' = ?');
     $stT->execute([$todayStr]);
     $todayCount = (int) $stT->fetchColumn();
     $ucDistinct = (int) $pdo->query('SELECT COUNT(DISTINCT uc_no) FROM attendance')->fetchColumn();
@@ -161,7 +162,6 @@ $exportQs = http_build_query([
       <div class="rec-list">
         <?php foreach ($records as $r): ?>
         <?php
-          $dt = new DateTime($r['created_at']);
           $maps = 'https://maps.google.com/?q=' . urlencode((string) $r['lat'] . ',' . (string) $r['lng']);
         ?>
         <div class="rec-card">
@@ -171,7 +171,7 @@ $exportQs = http_build_query([
               <span class="rec-name"><?= h($r['uc_name']) ?></span>
               <?php if ($r['tehsil']): ?><span class="t-badge"><?= h($r['tehsil']) ?></span><?php endif; ?>
             </div>
-            <span class="rec-time"><?= h($dt->format('d M Y, g:i A')) ?></span>
+            <span class="rec-time"><?= h(attendance_format_time($r['created_at'])) ?></span>
           </div>
           <div class="rec-body">
             <span>👤 <?= h($r['secretary_name']) ?></span>
