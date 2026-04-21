@@ -44,8 +44,8 @@ function attendance_format_time(?string $mysqlDatetime): string
 
 /**
  * SQL expression for calendar date in Pakistan (Asia/Karachi) from created_at.
- * UTC: offset form works without MySQL time_zone tables.
- * Europe/Berlin (German hosting): named zones need MySQL tables (most hosts have them).
+ * Prefer attendance_created_bounds_for_pkt_calendar() for WHERE clauses: CONVERT_TZ with
+ * named zones returns NULL when MySQL time zone tables are not loaded (common on shared hosting).
  */
 function attendance_sql_calendar_date(string $column = 'created_at'): string
 {
@@ -58,4 +58,28 @@ function attendance_sql_calendar_date(string $column = 'created_at'): string
     }
     $esc = str_replace("'", "''", $fromZone);
     return "DATE(CONVERT_TZ($column, '$esc', 'Asia/Karachi'))";
+}
+
+/**
+ * Inclusive Pakistan (PKT) calendar-day range as naive DATETIME strings in DB_DATETIME_ZONE
+ * for comparing against created_at. Use when filtering admin/export by date pickers.
+ *
+ * @return array{0: ?string, 1: ?string} [lower created_at bound, upper bound] or null entries if no filter
+ */
+function attendance_created_bounds_for_pkt_calendar(string $fromYmd, string $toYmd): array
+{
+    $dbZoneName = defined('DB_DATETIME_ZONE') ? DB_DATETIME_ZONE : 'UTC';
+    $dbZone = new DateTimeZone($dbZoneName);
+    $pkZone = new DateTimeZone('Asia/Karachi');
+    $lower = null;
+    $upper = null;
+    if ($fromYmd !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fromYmd)) {
+        $lower = (new DateTimeImmutable($fromYmd . ' 00:00:00', $pkZone))
+            ->setTimezone($dbZone)->format('Y-m-d H:i:s');
+    }
+    if ($toYmd !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $toYmd)) {
+        $upper = (new DateTimeImmutable($toYmd . ' 23:59:59', $pkZone))
+            ->setTimezone($dbZone)->format('Y-m-d H:i:s');
+    }
+    return [$lower, $upper];
 }

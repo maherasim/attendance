@@ -89,14 +89,14 @@ if ($fTh !== '') {
     $sql .= ' AND tehsil = ?';
     $params[] = $fTh;
 }
-$calDate = attendance_sql_calendar_date('created_at');
-if ($fFrom !== '') {
-    $sql .= ' AND ' . $calDate . ' >= ?';
-    $params[] = $fFrom;
+[$boundFrom, $boundTo] = attendance_created_bounds_for_pkt_calendar($fFrom, $fTo);
+if ($boundFrom !== null) {
+    $sql .= ' AND created_at >= ?';
+    $params[] = $boundFrom;
 }
-if ($fTo !== '') {
-    $sql .= ' AND ' . $calDate . ' <= ?';
-    $params[] = $fTo;
+if ($boundTo !== null) {
+    $sql .= ' AND created_at <= ?';
+    $params[] = $boundTo;
 }
 $sql .= ' ORDER BY id ASC';
 

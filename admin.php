@@ -45,14 +45,14 @@ if ($logged) {
         $where .= ' AND tehsil = ?';
         $params[] = $fTh;
     }
-    $calDate = attendance_sql_calendar_date('created_at');
-    if ($fFrom !== '') {
-        $where .= ' AND ' . $calDate . ' >= ?';
-        $params[] = $fFrom;
+    [$boundFrom, $boundTo] = attendance_created_bounds_for_pkt_calendar($fFrom, $fTo);
+    if ($boundFrom !== null) {
+        $where .= ' AND created_at >= ?';
+        $params[] = $boundFrom;
     }
-    if ($fTo !== '') {
-        $where .= ' AND ' . $calDate . ' <= ?';
-        $params[] = $fTo;
+    if ($boundTo !== null) {
+        $where .= ' AND created_at <= ?';
+        $params[] = $boundTo;
     }
 
     $stCount = $pdo->prepare('SELECT COUNT(*)' . $where);
@@ -79,9 +79,13 @@ if ($logged) {
     }
 
     $allCount = (int) $pdo->query('SELECT COUNT(*) FROM attendance')->fetchColumn();
-    $stT = $pdo->prepare('SELECT COUNT(*) FROM attendance WHERE ' . attendance_sql_calendar_date('created_at') . ' = ?');
-    $stT->execute([$todayStr]);
-    $todayCount = (int) $stT->fetchColumn();
+    [$todayLo, $todayHi] = attendance_created_bounds_for_pkt_calendar($todayStr, $todayStr);
+    $todayCount = 0;
+    if ($todayLo !== null && $todayHi !== null) {
+        $stT = $pdo->prepare('SELECT COUNT(*) FROM attendance WHERE created_at >= ? AND created_at <= ?');
+        $stT->execute([$todayLo, $todayHi]);
+        $todayCount = (int) $stT->fetchColumn();
+    }
     $ucDistinct = (int) $pdo->query('SELECT COUNT(DISTINCT uc_no) FROM attendance')->fetchColumn();
 
     $stats = [
