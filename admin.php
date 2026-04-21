@@ -156,38 +156,36 @@ function admin_pager_url(array $base, int $p): string
     <div class="card">
       <h2 class="card-title">Filter &amp; export</h2>
       <form method="get" class="filter-grid">
-        <div class="filter-fields">
-          <div class="fld">
-            <label class="lbl">UC</label>
-            <select class="inp" name="uc">
-              <option value="">All UCs</option>
-              <?php for ($i = 1; $i <= 105; $i++): ?>
-              <option value="<?= $i ?>" <?= $fUc === (string) $i ? 'selected' : '' ?>>UC <?= $i ?></option>
-              <?php endfor; ?>
-            </select>
-          </div>
-          <div class="fld">
-            <label class="lbl">Tehsil</label>
-            <select class="inp" name="tehsil">
-              <option value="">All</option>
-              <?php foreach ($tehsils as $t): ?>
-              <option value="<?= h($t) ?>" <?= $fTh === $t ? 'selected' : '' ?>><?= h($t) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="fld">
-            <label class="lbl">From</label>
-            <input class="inp" type="date" name="from" value="<?= h($fFrom) ?>"/>
-          </div>
-          <div class="fld">
-            <label class="lbl">To</label>
-            <input class="inp" type="date" name="to" value="<?= h($fTo) ?>"/>
-          </div>
+        <div class="fld">
+          <label class="lbl">UC</label>
+          <select class="inp" name="uc">
+            <option value="">All UCs</option>
+            <?php for ($i = 1; $i <= 105; $i++): ?>
+            <option value="<?= $i ?>" <?= $fUc === (string) $i ? 'selected' : '' ?>>UC <?= $i ?></option>
+            <?php endfor; ?>
+          </select>
         </div>
-        <div class="filter-actions">
-          <button class="btn-filter btn-secondary" type="submit">Apply</button>
-          <button class="btn-filter btn-clear-filters" type="button" id="admin-clear-filters">Clear filters</button>
-          <button class="btn-filter btn-export" type="submit" formaction="export.php" formmethod="get">📊 Export Excel</button>
+        <div class="fld">
+          <label class="lbl">Tehsil</label>
+          <select class="inp" name="tehsil">
+            <option value="">All</option>
+            <?php foreach ($tehsils as $t): ?>
+            <option value="<?= h($t) ?>" <?= $fTh === $t ? 'selected' : '' ?>><?= h($t) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="fld">
+          <label class="lbl">From</label>
+          <input class="inp" type="date" name="from" value="<?= h($fFrom) ?>"/>
+        </div>
+        <div class="fld">
+          <label class="lbl">To</label>
+          <input class="inp" type="date" name="to" value="<?= h($fTo) ?>"/>
+        </div>
+        <div class="fld fld-actions">
+          <button class="btn-secondary" type="submit">Apply</button>
+          <button class="btn-clear-filters" type="button" id="admin-clear-filters">Clear filters</button>
+          <button class="btn-export" type="submit" formaction="export.php" formmethod="get">📊 Export Excel</button>
         </div>
       </form>
     </div>
