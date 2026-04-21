@@ -72,6 +72,11 @@ a{color:#2980b9;}
 .btn-export{display:inline-block;padding:10px 14px;border-radius:8px;background:linear-gradient(135deg,#1a5276,#2980b9);color:#fff;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;font:inherit;}
 .filter-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;}
 .filter-grid .fld{flex:1;min-width:105px;margin-bottom:0;}
+/* Full-width row so buttons are not squeezed beside the "To" field; one line on mobile. */
+.filter-grid .fld-actions{flex:1 1 100%;width:100%;min-width:0;margin-top:2px;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;gap:6px;}
+.filter-grid .fld-actions .btn-secondary,
+.filter-grid .fld-actions .btn-clear-filters,
+.filter-grid .fld-actions .btn-export{flex:1 1 0;min-width:0;padding:8px 6px;font-size:11px;line-height:1.25;border-radius:7px;white-space:nowrap;}
 .fld-actions{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;}
 
 /* [hidden] must win over .success-box flex, or both panels stay visible on every load */
