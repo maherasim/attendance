@@ -35,6 +35,11 @@ try {
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
+    // DATETIME DEFAULT CURRENT_TIMESTAMP uses the session time zone. When DB_DATETIME_ZONE is
+    // Asia/Karachi, pin MySQL so new rows store Pakistan wall clock (avoids EU host default).
+    if (defined('DB_DATETIME_ZONE') && DB_DATETIME_ZONE === 'Asia/Karachi') {
+        $pdo->exec("SET time_zone = '+05:00'");
+    }
 } catch (PDOException $e) {
     error_log('Attendance PDO: ' . $e->getMessage());
     if ($isApi) {

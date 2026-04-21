@@ -14,10 +14,17 @@ define('DB_CHARSET', 'utf8mb4');
 /** Pakistan Standard Time for admin UI, CSV, and "today" filters */
 define('APP_TIMEZONE', 'Asia/Karachi');
 /**
- * Zone of the naive DATETIME in DB (what MySQL clock used when saving created_at).
- * - 'Europe/Berlin' — typical German shared hosting (your live case).
- * - 'UTC' — if phpMyAdmin / NOW() shows UTC.
- * - 'Asia/Karachi' — if DB already stores Pakistan wall clock (e.g. some local installs).
+ * Zone the app uses to interpret naive created_at (DATETIME) for filters and export.
+ * Must match what is actually stored — one zone for the whole column.
+ *
+ * - 'Europe/Berlin' — if every row was written with MySQL default time (typical DE hosting).
+ * - 'Asia/Karachi' — if every row is Pakistan wall clock (local XAMPP or after migration).
+ * - 'UTC' — if values are UTC wall clock.
+ *
+ * If you had Berlin-era rows then switched MySQL/PHP so NEW rows are Pakistan time, the
+ * column is mixed until you run: php tools/migrate_attendance_created_at_to_pkt.php
+ * Then set this to 'Asia/Karachi'. With Asia/Karachi, bootstrap sets SET time_zone = '+05:00'
+ * so new CURRENT_TIMESTAMP values stay Pakistan-local.
  */
 define('DB_DATETIME_ZONE', 'Europe/Berlin');
 
