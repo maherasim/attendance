@@ -67,7 +67,9 @@ a{color:#2980b9;}
 .submit-btn{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,#0d5c3a,#1a7a4a);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(13,92,58,.3);margin-top:4px;}
 .submit-btn:disabled{opacity:.7;cursor:not-allowed;}
 .btn-secondary{padding:10px 16px;border-radius:8px;border:1.5px solid #0d5c3a;background:#fff;color:#0d5c3a;font-weight:600;cursor:pointer;font-size:13px;}
-.btn-export{display:inline-block;padding:10px 14px;border-radius:8px;background:linear-gradient(135deg,#1a5276,#2980b9);color:#fff;font-size:13px;font-weight:700;text-decoration:none;}
+.btn-clear-filters{display:inline-block;padding:10px 16px;border-radius:8px;border:1.5px solid #cfd8dc;background:#fff;color:#546e7a;font-weight:600;font-size:13px;text-decoration:none;}
+.btn-clear-filters:hover{background:#f5f7f8;}
+.btn-export{display:inline-block;padding:10px 14px;border-radius:8px;background:linear-gradient(135deg,#1a5276,#2980b9);color:#fff;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;font:inherit;}
 
 /* [hidden] must win over .success-box flex, or both panels stay visible on every load */
 .success-box[hidden]{display:none!important;}

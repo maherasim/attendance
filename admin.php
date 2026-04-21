@@ -104,7 +104,6 @@ $filterQs = array_filter([
 ], static function ($v) {
     return $v !== '' && $v !== null;
 });
-$exportQs = http_build_query($filterQs);
 
 function admin_pager_url(array $base, int $p): string
 {
@@ -185,7 +184,8 @@ function admin_pager_url(array $base, int $p): string
         </div>
         <div class="fld fld-actions">
           <button class="btn-secondary" type="submit">Apply</button>
-          <a class="btn-export" href="export.php?<?= h($exportQs) ?>">📊 Export Excel</a>
+          <a class="btn-clear-filters" href="admin.php">Clear filters</a>
+          <button class="btn-export" type="submit" formaction="export.php" formmethod="get">📊 Export Excel</button>
         </div>
       </form>
     </div>
