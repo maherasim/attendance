@@ -218,7 +218,7 @@ function admin_pager_url(array $base, int $p): string
             <span>👤 <?= h($r['secretary_name']) ?></span>
             <span class="dist">📏 <?= (int) $r['distance_m'] ?>m</span>
             <a class="link" href="<?= h($maps) ?>" target="_blank" rel="noopener">📍 Map</a>
-            <button type="button" class="photo-modal-trigger" data-photo-id="<?= (int) $r['id'] ?>">📸 Photo</button>
+            <a class="link" href="photo.php?id=<?= (int) $r['id'] ?>" target="_blank" rel="noopener">📸 Photo</a>
           </div>
         </div>
         <?php endforeach; ?>
@@ -241,14 +241,6 @@ function admin_pager_url(array $base, int $p): string
       <?php endif; ?>
     </div>
 
-    <div id="admin-photo-modal" class="photo-modal" hidden>
-      <button type="button" class="photo-modal-backdrop" aria-label="Close photo"></button>
-      <div class="photo-modal-dialog" role="dialog" aria-modal="true" aria-label="Attendance photo">
-        <button type="button" class="photo-modal-x" aria-label="Close">&times;</button>
-        <img src="" alt="Attendance photo" class="photo-modal-img"/>
-      </div>
-    </div>
-
     <p class="footer"><a href="index.php">Staff attendance</a></p>
     <script>
     (function () {
@@ -256,43 +248,6 @@ function admin_pager_url(array $base, int $p): string
       if (clearBtn) {
         clearBtn.addEventListener('click', function () {
           window.location.href = 'admin.php';
-        });
-      }
-
-      var modal = document.getElementById('admin-photo-modal');
-      var img = modal && modal.querySelector('.photo-modal-img');
-      var closeEls = modal && modal.querySelectorAll('.photo-modal-x, .photo-modal-backdrop');
-
-      function closePhotoModal() {
-        if (!modal || !img) return;
-        modal.hidden = true;
-        img.removeAttribute('src');
-        document.body.style.overflow = '';
-      }
-
-      function openPhotoModal(id) {
-        if (!modal || !img) return;
-        img.src = 'photo.php?id=' + encodeURIComponent(id);
-        modal.hidden = false;
-        document.body.style.overflow = 'hidden';
-      }
-
-      if (modal && img) {
-        var recList = document.querySelector('.rec-list');
-        if (recList) {
-          recList.addEventListener('click', function (e) {
-            var t = e.target.closest('.photo-modal-trigger');
-            if (!t) return;
-            e.preventDefault();
-            var id = t.getAttribute('data-photo-id');
-            if (id) openPhotoModal(id);
-          });
-        }
-        closeEls && closeEls.forEach(function (el) {
-          el.addEventListener('click', closePhotoModal);
-        });
-        document.addEventListener('keydown', function (e) {
-          if (e.key === 'Escape' && modal && !modal.hidden) closePhotoModal();
         });
       }
     })();
