@@ -185,7 +185,7 @@ function admin_pager_url(array $base, int $p): string
         <div class="fld fld-actions">
           <button class="btn-secondary" type="submit">Apply</button>
           <button class="btn-clear-filters" type="button" id="admin-clear-filters">Clear filters</button>
-          <button class="btn-export" type="submit" formaction="export.php" formmethod="get">📊 Export Excel</button>
+          <button class="btn-export" type="submit" formaction="export.php" formmethod="get">Export </button>
         </div>
       </form>
     </div>
