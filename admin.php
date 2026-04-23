@@ -212,7 +212,7 @@ function admin_pager_url(array $base, int $p): string
               <span class="rec-name"><?= h($r['uc_name']) ?></span>
               <?php if ($r['tehsil']): ?><span class="t-badge"><?= h($r['tehsil']) ?></span><?php endif; ?>
             </div>
-            <span class="rec-time"><?= h(attendance_format_time($r['created_at'])) ?></span>
+            <span class="rec-time" title="<?= h(attendance_format_time($r['created_at'])) ?>"><?= h(attendance_relative_time($r['created_at'])) ?></span>
           </div>
           <div class="rec-body">
             <span>👤 <?= h($r['secretary_name']) ?></span>

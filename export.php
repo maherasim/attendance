@@ -33,6 +33,24 @@ function export_date_time_maps(array $r): array
     ];
 }
 
+/** Full datetime string in APP_TIMEZONE (e.g. Pakistan) for spreadsheets. */
+function export_created_pkt_full(?string $mysqlDatetime): string
+{
+    if ($mysqlDatetime === null || $mysqlDatetime === '') {
+        return '';
+    }
+    try {
+        $dt = new DateTimeImmutable(
+            $mysqlDatetime,
+            new DateTimeZone(defined('DB_DATETIME_ZONE') ? DB_DATETIME_ZONE : 'UTC')
+        );
+        $dt = $dt->setTimezone(new DateTimeZone(defined('APP_TIMEZONE') ? APP_TIMEZONE : 'Asia/Karachi'));
+        return $dt->format('Y-m-d H:i:s') . ' PKT';
+    } catch (Exception $e) {
+        return $mysqlDatetime;
+    }
+}
+
 /**
  * @return array{path: ?string, unlink: list<string>}
  */
@@ -128,12 +146,6 @@ $st = $pdo->prepare($sql);
 $st->execute($params);
 $rows = $st->fetchAll();
 
-$spreadsheet = new Spreadsheet();
-
-// —— Sheet 1: UC summary (all UCs in scope + Present / Absent) ——
-$sum = $spreadsheet->getActiveSheet();
-$sum->setTitle('UC Summary');
-
 $periodLabel = 'Report period: ';
 if ($fFrom !== '' && $fTo !== '') {
     $periodLabel .= $fFrom . ' → ' . $fTo . ' (PKT calendar)';
@@ -150,6 +162,12 @@ if ($fTh !== '') {
 if ($fUc !== '') {
     $periodLabel .= ' · UC filter: ' . $fUc;
 }
+
+$spreadsheet = new Spreadsheet();
+
+// —— Sheet 1: UC summary (all UCs in scope + Present / Absent) ——
+$sum = $spreadsheet->getActiveSheet();
+$sum->setTitle('UC Summary');
 
 $sum->mergeCells('A1:E1');
 $sum->setCellValue('A1', 'District Vehari — Local Government · UC attendance overview');
@@ -234,44 +252,96 @@ $sum->getColumnDimension('D')->setWidth(14);
 $sum->getColumnDimension('E')->setWidth(16);
 $sum->freezePane('A' . ($hdrRow + 1));
 
-// —— Sheet 2: detailed marks (photos) ——
+// —— Sheet 2: full attendance rows (all DB columns + map link + thumbnail) ——
 $det = $spreadsheet->createSheet();
-$det->setTitle('Detail');
+$det->setTitle('Attendance detail');
 
+$detLastCol = 'N';
+$det->mergeCells('A1:' . $detLastCol . '1');
+$det->setCellValue('A1', 'District Vehari — Local Government · Attendance export (full table data)');
+$det->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+$det->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+$det->mergeCells('A2:' . $detLastCol . '2');
+$det->setCellValue('A2', $periodLabel . ' · Rows: ' . count($rows));
+$det->getStyle('A2')->getFont()->setSize(10);
+$det->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+$hdrRowDet = 3;
 $headers = [
-    'ID', 'Date', 'Time', 'UC No', 'UC Name', 'Tehsil', 'Secretary Name',
-    'Distance (m)', 'Latitude', 'Longitude', 'Accuracy (m)', 'Maps URL', 'Photo',
+    'ID',
+    'Created at (database)',
+    'Recorded (PKT)',
+    'UC No',
+    'UC Name',
+    'Tehsil',
+    'Secretary name',
+    'Latitude',
+    'Longitude',
+    'GPS accuracy (m)',
+    'Distance from office (m)',
+    'Photo file',
+    'Google Maps',
+    'Photo preview',
 ];
-$det->fromArray($headers, null, 'A1');
-$det->getStyle('A1:M1')->getFont()->setBold(true);
+$det->fromArray($headers, null, 'A' . $hdrRowDet);
+$det->getStyle('A' . $hdrRowDet . ':' . $detLastCol . $hdrRowDet)->getFont()->setBold(true);
+$det->getStyle('A' . $hdrRowDet . ':' . $detLastCol . $hdrRowDet)->getFill()
+    ->setFillType(Fill::FILL_SOLID)
+    ->getStartColor()->setRGB('0D5C3A');
+$det->getStyle('A' . $hdrRowDet . ':' . $detLastCol . $hdrRowDet)->getFont()->getColor()->setRGB('FFFFFF');
+$det->getStyle('A' . $hdrRowDet . ':' . $detLastCol . $hdrRowDet)->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+    ->setVertical(Alignment::VERTICAL_CENTER)
+    ->setWrapText(true);
+$det->getRowDimension($hdrRowDet)->setRowHeight(28);
+$det->setAutoFilter('A' . $hdrRowDet . ':' . 'M' . $hdrRowDet);
+$det->freezePane('A' . ($hdrRowDet + 1));
 
-$det->getColumnDimension('E')->setWidth(24);
-$det->getColumnDimension('G')->setWidth(18);
-$det->getColumnDimension('L')->setWidth(36);
-$det->getColumnDimension('M')->setWidth(14);
+$det->getColumnDimension('A')->setWidth(10);
+$det->getColumnDimension('B')->setWidth(20);
+$det->getColumnDimension('C')->setWidth(22);
+$det->getColumnDimension('D')->setWidth(8);
+$det->getColumnDimension('E')->setWidth(26);
+$det->getColumnDimension('F')->setWidth(12);
+$det->getColumnDimension('G')->setWidth(22);
+$det->getColumnDimension('H')->setWidth(12);
+$det->getColumnDimension('I')->setWidth(12);
+$det->getColumnDimension('J')->setWidth(12);
+$det->getColumnDimension('K')->setWidth(14);
+$det->getColumnDimension('L')->setWidth(28);
+$det->getColumnDimension('M')->setWidth(40);
+$det->getColumnDimension('N')->setWidth(14);
 
 $toUnlink = [];
-$rowIdx = 2;
+$rowIdx = $hdrRowDet + 1;
 
 foreach ($rows as $r) {
-    [$d, $t, $maps] = export_date_time_maps($r);
+    [, , $maps] = export_date_time_maps($r);
+    $acc = $r['accuracy_m'];
     $rowData = [
         $r['id'],
-        $d,
-        $t,
+        $r['created_at'],
+        export_created_pkt_full($r['created_at']),
         $r['uc_no'],
         $r['uc_name'],
         $r['tehsil'],
         $r['secretary_name'],
-        $r['distance_m'],
         $r['lat'],
         $r['lng'],
-        $r['accuracy_m'],
+        $acc !== null && $acc !== '' ? (int) $acc : '',
+        $r['distance_m'],
+        $r['photo_file'] ?? '',
         $maps,
         '',
     ];
     $det->fromArray($rowData, null, 'A' . $rowIdx);
-    $det->getCell('L' . $rowIdx)->getHyperlink()->setUrl($maps);
+    $det->getCell('M' . $rowIdx)->getHyperlink()->setUrl($maps);
+    $det->getStyle('A' . $rowIdx . ':M' . $rowIdx)->getBorders()->getAllBorders()
+        ->setBorderStyle(Border::BORDER_THIN)
+        ->getColor()->setRGB('DDDDDD');
+    $det->getStyle('H' . $rowIdx . ':I' . $rowIdx)->getAlignment()
+        ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
     $prep = export_prepare_image_path($r['photo_file'] ?? null);
     foreach ($prep['unlink'] as $u) {
@@ -283,7 +353,7 @@ foreach ($rows as $r) {
         $drawing->setDescription('Attendance photo');
         $drawing->setPath($prep['path']);
         $drawing->setHeight(115);
-        $drawing->setCoordinates('M' . $rowIdx);
+        $drawing->setCoordinates('N' . $rowIdx);
         $drawing->setOffsetX(3);
         $drawing->setOffsetY(3);
         $drawing->setWorksheet($det);

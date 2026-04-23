@@ -43,6 +43,54 @@ function attendance_format_time(?string $mysqlDatetime): string
 }
 
 /**
+ * Short relative label vs now (APP_TIMEZONE), e.g. "just now", "4 h ago", "3 d ago".
+ */
+function attendance_relative_time(?string $mysqlDatetime): string
+{
+    if ($mysqlDatetime === null || $mysqlDatetime === '') {
+        return '';
+    }
+    $dbZoneName = defined('DB_DATETIME_ZONE') ? DB_DATETIME_ZONE : 'UTC';
+    $appZoneName = defined('APP_TIMEZONE') ? APP_TIMEZONE : 'Asia/Karachi';
+    try {
+        $then = (new DateTimeImmutable($mysqlDatetime, new DateTimeZone($dbZoneName)))
+            ->setTimezone(new DateTimeZone($appZoneName));
+        $now = new DateTimeImmutable('now', new DateTimeZone($appZoneName));
+    } catch (Exception $e) {
+        return '';
+    }
+    $secs = $now->getTimestamp() - $then->getTimestamp();
+    if ($secs < 0) {
+        return 'just now';
+    }
+    if ($secs < 60) {
+        return 'just now';
+    }
+    if ($secs < 3600) {
+        $m = intdiv($secs, 60);
+
+        return $m === 1 ? '1 min ago' : $m . ' min ago';
+    }
+    if ($secs < 86400) {
+        $h = intdiv($secs, 3600);
+
+        return $h === 1 ? '1 h ago' : $h . ' h ago';
+    }
+    if ($secs < 604800) {
+        $d = intdiv($secs, 86400);
+
+        return $d === 1 ? '1 d ago' : $d . ' d ago';
+    }
+    if ($secs < 2592000) {
+        $w = intdiv($secs, 604800);
+
+        return $w === 1 ? '1 wk ago' : $w . ' wk ago';
+    }
+
+    return $then->format('d M Y');
+}
+
+/**
  * SQL expression for calendar date in Pakistan (Asia/Karachi) from created_at.
  * Prefer attendance_created_bounds_for_pkt_calendar() for WHERE clauses: CONVERT_TZ with
  * named zones returns NULL when MySQL time zone tables are not loaded (common on shared hosting).
