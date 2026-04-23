@@ -33,6 +33,12 @@ define('GEOFENCE_M', 500);
 /** Production: false. true = skip 500m geofence (testing only). */
 define('BYPASS_GEOFENCE', false);
 
+/**
+ * If true, reject api_submit when distance_m > GEOFENCE_M. Default false so bad UC coordinates
+ * do not block attendance; distance is still saved for audit.
+ */
+define('STRICT_GEOFENCE', false);
+
 /** Bcrypt hash — generate with: php -r "echo password_hash('YourPassword', PASSWORD_DEFAULT);" */
 define('ADMIN_PASSWORD_HASH', '$2y$10$2G0s5Pyq0fojA0mzn1tULO5pIRsYq9/2or6Pr.fij5qG.UDfLLmGu');
 

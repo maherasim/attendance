@@ -38,15 +38,17 @@ $oLat = (float) $office['lat'];
 $oLng = (float) $office['lng'];
 $dist = (int) round(distance_meters($lat, $lng, $oLat, $oLng));
 
-// 500m geofence (skipped when BYPASS_GEOFENCE is true in config.php)
-if (!defined('BYPASS_GEOFENCE') || !BYPASS_GEOFENCE) {
-    if ($dist > GEOFENCE_M) {
-        json_out([
-            'success' => false,
-            'error' => "You are {$dist}m from the office. Must be within " . GEOFENCE_M . 'm.',
-            'distance_m' => $dist,
-        ], 403);
-    }
+// Distance and accuracy are always stored. Optional strict geofence (off by default — some UC pins are inaccurate).
+if (
+    defined('STRICT_GEOFENCE') && STRICT_GEOFENCE
+    && (!defined('BYPASS_GEOFENCE') || !BYPASS_GEOFENCE)
+    && $dist > GEOFENCE_M
+) {
+    json_out([
+        'success' => false,
+        'error' => "You are {$dist}m from the office. Must be within " . GEOFENCE_M . 'm.',
+        'distance_m' => $dist,
+    ], 403);
 }
 
 $f = $_FILES['photo'];

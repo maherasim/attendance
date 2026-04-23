@@ -162,7 +162,8 @@
 
     btn.className = 'action-btn';
     if (locState === 'inside') btn.classList.add('action-ok');
-    if (locState === 'outside' || locState === 'error') btn.classList.add('action-err');
+    if (locState === 'outside') btn.classList.add('action-warn');
+    if (locState === 'error') btn.classList.add('action-err');
     if (locState === 'fetching') btn.classList.add('action-busy');
 
     btn.disabled = locState === 'fetching';
@@ -174,7 +175,7 @@
         : locState === 'inside'
         ? '📍 Location Verified ✓'
         : locState === 'outside'
-        ? '🚫 Outside Range — Try Again'
+        ? '📍 Location recorded (outside ' + GEOFENCE_M + 'm — submit OK)'
         : locState === 'error'
         ? '❌ GPS Error — Try Again'
         : '📍 Verify My Location';
@@ -196,11 +197,11 @@
         'm</div></div>';
     } else if (locState === 'outside' && loc) {
       box.innerHTML =
-        '<div class="geo-box geo-bad"><div class="geo-title">🚫 Outside Geofence</div><div class="geo-detail">You are <strong>' +
-        distance +
-        'm</strong> from office. Must be within <strong>' +
+        '<div class="geo-box geo-warn"><div class="geo-title">⚠️ Outside ' +
         GEOFENCE_M +
-        'm</strong>.</div></div>';
+        'm reference</div><div class="geo-detail">You are <strong>' +
+        distance +
+        'm</strong> from the UC pin. Coordinates may be off; you can still submit — distance is saved for records.</div></div>';
     } else if (locState === 'error') {
       box.innerHTML =
         '<div class="geo-box geo-bad"><div class="geo-title">❌ GPS Error</div><div class="geo-detail">Allow location access and try again.</div></div>';
@@ -275,9 +276,14 @@
       $('err-photo').hidden = false;
       ok = false;
     }
-    if (!BYPASS_GEOFENCE && locState !== 'inside') {
+    if (
+      !BYPASS_GEOFENCE &&
+      (!loc || locState === 'idle' || locState === 'fetching' || locState === 'error')
+    ) {
       $('err-loc').textContent =
-        'Location must be verified within ' + GEOFENCE_M + 'm of UC office';
+        'Tap “Verify My Location” and allow GPS (inside or outside ' +
+        GEOFENCE_M +
+        'm is OK).';
       $('err-loc').hidden = false;
       ok = false;
     }

@@ -60,7 +60,7 @@ date_default_timezone_set(defined('APP_TIMEZONE') ? APP_TIMEZONE : 'Asia/Karachi
   <main class="main">
     <div id="form-screen" class="card">
       <h1 class="card-title">Secretary UC — Daily Attendance</h1>
-      <p class="card-sub">All fields mandatory · Location verified within <?= (int) GEOFENCE_M ?>m of UC office</p>
+      <p class="card-sub">All fields mandatory · GPS required; distance from UC office is saved (<?= (int) GEOFENCE_M ?>m is the on-site reference)</p>
 
       <div class="fld">
         <label class="lbl" for="uc_no">UC Number (1–105) *</label>
@@ -121,7 +121,7 @@ date_default_timezone_set(defined('APP_TIMEZONE') ? APP_TIMEZONE : 'Asia/Karachi
     </div>
   </main>
 
-  <div class="footer">District Local Government · Vehari © <?= (int) date('Y') ?> · Geo-Fenced <?= (int) GEOFENCE_M ?>m · <a href="admin.php">Admin</a></div>
+  <div class="footer">District Local Government · Vehari © <?= (int) date('Y') ?> · GPS distance logged · <a href="admin.php">Admin</a></div>
 </div>
 
 <script>
