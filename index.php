@@ -29,7 +29,7 @@ date_default_timezone_set(defined('APP_TIMEZONE') ? APP_TIMEZONE : 'Asia/Karachi
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <meta name="theme-color" content="#0d5c3a"/>
 <title>Vehari UC Attendance</title>
-<link rel="stylesheet" href="assets/css/app.css"/>
+<link rel="stylesheet" href="assets/css/app.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/app.css') ?>"/>
 </head>
 <body>
 <div id="root">
@@ -132,6 +132,6 @@ window.APP = {
   API_SUBMIT: 'api_submit.php'
 };
 </script>
-<script src="assets/js/staff.js" defer></script>
+<script src="assets/js/staff.js?v=<?= (int) @filemtime(__DIR__ . '/assets/js/staff.js') ?>" defer></script>
 </body>
 </html>
