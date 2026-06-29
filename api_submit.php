@@ -77,7 +77,23 @@ ensure_upload_dir();
 $basename = 'att_' . bin2hex(random_bytes(16)) . '.' . $ext;
 $dest = UPLOAD_DIR . $basename;
 if (!move_uploaded_file($f['tmp_name'], $dest)) {
-    json_out(['success' => false, 'error' => 'Could not save photo.'], 500);
+    $phpUser = '?';
+    if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
+        $pw = @posix_getpwuid(posix_geteuid());
+        $phpUser = $pw ? $pw['name'] : (string) posix_geteuid();
+    }
+    json_out(['success' => false, 'error' => 'Could not save photo.', 'debug' => [
+        'upload_dir'    => UPLOAD_DIR,
+        'dir_exists'    => is_dir(UPLOAD_DIR),
+        'dir_writable'  => is_writable(UPLOAD_DIR),
+        'php_user'      => $phpUser,
+        'open_basedir'  => ini_get('open_basedir') ?: 'none',
+        'upload_tmp_dir'=> ini_get('upload_tmp_dir') ?: sys_get_temp_dir(),
+        'tmp_exists'    => file_exists($f['tmp_name']),
+        'file_upload_err' => $f['error'],
+        'file_size'     => $f['size'],
+        'dest_path'     => $dest,
+    ]], 500);
 }
 
 $ins = $pdo->prepare(

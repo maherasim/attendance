@@ -290,6 +290,31 @@
     return ok;
   }
 
+  function showError(html) {
+    $('fail-msg').innerHTML = html;
+    $('form-screen').hidden = true;
+    $('ok-fail').hidden = false;
+  }
+
+  function buildDebugHtml(status, rawText, data) {
+    let html = '<div style="text-align:left;margin-top:10px;font-size:12px;">';
+    html += '<b>HTTP status:</b> ' + status + '<br/>';
+    if (data && data.error) {
+      html += '<b>Server error:</b> ' + data.error + '<br/>';
+    }
+    if (data && data.debug) {
+      html += '<b>Debug info:</b><pre style="background:#1a1a1a;color:#f8f8f2;padding:8px;border-radius:4px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;font-size:11px;margin:4px 0;">' +
+        JSON.stringify(data.debug, null, 2) + '</pre>';
+    }
+    if (!data || !data.error) {
+      html += '<b>Raw response:</b><pre style="background:#1a1a1a;color:#f8f8f2;padding:8px;border-radius:4px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;font-size:11px;margin:4px 0;">' +
+        (rawText || '(empty)').substring(0, 2000) + '</pre>';
+    }
+    html += '<button onclick="location.reload()" style="margin-top:8px;padding:6px 16px;background:#c0392b;color:#fff;border:none;border-radius:4px;cursor:pointer;">Try Again</button>';
+    html += '</div>';
+    return html;
+  }
+
   async function submit() {
     if (!validate()) return;
     const sel = selectedUC();
@@ -325,34 +350,20 @@
 
     try {
       const res = await fetch(G.API_SUBMIT, { method: 'POST', body: fd });
-      let data = {};
-      try {
-        data = await res.json();
-      } catch (_) {
-        data = { success: false, error: 'Invalid server response.' };
-      }
-      if (data.success) {
+      const rawText = await res.text();
+      let data = null;
+      try { data = JSON.parse(rawText); } catch (_) { data = null; }
+
+      if (data && data.success) {
         $('form-screen').hidden = true;
         $('ok-saved').hidden = false;
         setTimeout(resetForm, 3200);
       } else {
-        $('fail-msg').textContent =
-          data.error || 'Server rejected the request.';
-        $('form-screen').hidden = true;
-        $('ok-fail').hidden = false;
-        setTimeout(() => {
-          $('ok-fail').hidden = true;
-          $('form-screen').hidden = false;
-        }, 4000);
+        showError(buildDebugHtml(res.status, rawText, data));
       }
     } catch (e) {
-      $('fail-msg').textContent = 'Network error — try again.';
-      $('form-screen').hidden = true;
-      $('ok-fail').hidden = false;
-      setTimeout(() => {
-        $('ok-fail').hidden = true;
-        $('form-screen').hidden = false;
-      }, 4000);
+      showError('<b>Network error:</b> ' + e.message +
+        '<br/><button onclick="location.reload()" style="margin-top:8px;padding:6px 16px;background:#c0392b;color:#fff;border:none;border-radius:4px;cursor:pointer;">Try Again</button>');
     }
     btn.disabled = false;
     btn.textContent = '✅ Submit Attendance';

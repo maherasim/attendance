@@ -61,12 +61,37 @@ try {
 }
 
 $uploadDir = __DIR__ . '/uploads/';
+$phpUser = '?';
+if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
+    $pw = @posix_getpwuid(posix_geteuid());
+    $phpUser = $pw ? $pw['name'] : (string) posix_geteuid();
+}
+echo "INFO: PHP running as user: $phpUser\n";
+echo "INFO: open_basedir = " . (ini_get('open_basedir') ?: 'none (unrestricted)') . "\n";
+echo "INFO: upload_tmp_dir = " . (ini_get('upload_tmp_dir') ?: sys_get_temp_dir()) . "\n\n";
+
 if (!is_dir($uploadDir)) {
-    echo "WARN: uploads/ directory missing — will be created on first submit\n";
-} elseif (!is_writable($uploadDir)) {
-    echo "FAIL: uploads/ directory is not writable — run: chmod 755 " . realpath($uploadDir) . "\n";
-} else {
-    echo "OK: uploads/ directory exists and is writable\n";
+    echo "WARN: uploads/ directory missing\n";
+    if (@mkdir($uploadDir, 0755, true)) {
+        echo "OK: uploads/ created by health check\n";
+    } else {
+        echo "FAIL: Could not create uploads/ — check open_basedir or parent directory permissions\n";
+    }
+}
+if (is_dir($uploadDir)) {
+    $perms = substr(sprintf('%o', fileperms($uploadDir)), -4);
+    $owner = function_exists('posix_getpwuid') ? (@posix_getpwuid(fileowner($uploadDir))['name'] ?? fileowner($uploadDir)) : fileowner($uploadDir);
+    echo "INFO: uploads/ owner=$owner perms=$perms\n";
+    $testFile = $uploadDir . '.write_test_' . time();
+    if (@file_put_contents($testFile, 'ok') !== false) {
+        @unlink($testFile);
+        echo "OK: uploads/ is writable (actual write test passed)\n";
+    } else {
+        echo "FAIL: uploads/ write test failed — run on server: chmod 777 " . realpath($uploadDir) . "\n";
+        if (ini_get('open_basedir')) {
+            echo "NOTE: open_basedir is set — uploads path must be inside: " . ini_get('open_basedir') . "\n";
+        }
+    }
 }
 
 echo "\nDone. If all OK, index.php should load. Delete health.php when finished.\n";
