@@ -24,6 +24,9 @@ function ensure_upload_dir(): void
     if (!is_dir(UPLOAD_DIR)) {
         mkdir(UPLOAD_DIR, 0755, true);
     }
+    if (!is_writable(UPLOAD_DIR)) {
+        chmod(UPLOAD_DIR, 0755);
+    }
 }
 
 /** Format MySQL created_at for Pakistan (PKT). */

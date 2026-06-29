@@ -1,9 +1,7 @@
 -- Vehari UC Attendance — import in phpMyAdmin or: mysql -u root -p < schema.sql
 -- Charset: utf8mb4
 
-CREATE DATABASE IF NOT EXISTS `vehari_uc_attendance`
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `vehari_uc_attendance`;
+ 
 
 DROP TABLE IF EXISTS `attendance`;
 DROP TABLE IF EXISTS `uc_offices`;

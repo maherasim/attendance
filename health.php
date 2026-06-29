@@ -60,4 +60,13 @@ try {
     echo 'WARN: attendance — ' . $e->getMessage() . "\n";
 }
 
+$uploadDir = __DIR__ . '/uploads/';
+if (!is_dir($uploadDir)) {
+    echo "WARN: uploads/ directory missing — will be created on first submit\n";
+} elseif (!is_writable($uploadDir)) {
+    echo "FAIL: uploads/ directory is not writable — run: chmod 755 " . realpath($uploadDir) . "\n";
+} else {
+    echo "OK: uploads/ directory exists and is writable\n";
+}
+
 echo "\nDone. If all OK, index.php should load. Delete health.php when finished.\n";
